@@ -1,0 +1,10 @@
+﻿# Archives and deps
+arch/
+**/node_modules/
+**/dist/
+**/.git/
+playwright-report/
+test-results/
+Deepseek/changelog.md
+**/*.mp4
+**/*.webm

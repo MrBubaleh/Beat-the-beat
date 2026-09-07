@@ -1,0 +1,121 @@
+MUSIC DIRECTOR RUNNER — snapshot 2026-08-28
+Browser 3D lane-runner. Music via Director changes world params; level layout is NOT generated from audio beats.
+Stack: TS, Vite, Three.js. Default mode: Destroy.
+
+=== CORE LOOP ===
+- 4 lanes. Player fixed at z=0; world scrolls toward player.
+- Input buffer ~120ms. Lane switch ~0.15s.
+- Speed: base ~9.5, auto-accel, max ~28 (car); rocket up to ~52.
+- Tick: gameplay 60Hz; render rAF; audio worklet for analysis.
+
+=== GAME MODES (selectable) ===
+DESTROY (default)
+- Car focus. HP HUD hidden.
+- Cycle: dodge tall / soft-hit medium / auto-break micro → fill nitro → smash green mediums.
+- Ground car-coins mostly off; micro clusters instead.
+
+CLASSIC
+- 3-hit damage (normal→damaged→critical). No adrenaline drain.
+- Standard coins and obstacles.
+
+ADRENALINE
+- Single adrenaline bar (0–100), passive drain, collision damage.
+- Low adrenaline = stress VFX + damage audio wet.
+- Smash/coins refill; critical threshold boosts nitro gain.
+
+=== PLAYER MODES ===
+CAR — default shape: box. Jump (classic), nitro, destroy combat.
+HORSE — sphere-ish; jump higher/longer; slide under overhead arches; momentum meter; orange palette.
+ROCKET — cone; limited fuel; flies over track; coin corridors on rails; separate camera/audio mix.
+
+Mode switches via pickup spheres (horse/rocket) or portals. Car↔horse cadence: first horse ~30–40s, then switches every ~12–22s, faster near song end (~8–11s).
+
+=== OBSTACLES (car / destroy) ===
+Kind   | Color role      | Size (W×D×H approx) | Behavior
+micro  | green always    | tiny (~⅓ low)       | touch = autobreak, +nitro, +combo; no HP loss; not in passability
+low    | yellow→green*   | 1.2×2.3×1.1         | yellow: soft hit (slow, combo reset); green@full nitro: smash w/o activating nitro
+tall   | red truck       | 1.5×8.0×2.05        | always damages (classic) / tall hit in destroy; must dodge or jump (ramp)
+overhead | orange arch   | ~2.0×1.5 (visual)   | horse only: must slide; down-arrow marker
+*low turns green when nitro bar full (not while nitro active).
+
+Compaction: adjacent same-kind in one lane (≤2 items) merge to one mesh with zExtent; center = midpoint of chain. Long trucks use rear-trimmed hitbox (zRearTrimRatio 0.18) so tail does not phantom-hit after dodge.
+
+=== NITRO (car) ===
+- Fill from micro breaks, dodges, smashes, coins (mode-dependent).
+- Active: speed boost, smash lows, special audio (shelf ~1850Hz), camera shake/bank.
+- Full bar without activation: lows look green + breakable; destroy smash without spending nitro.
+- Late song (from ~24% progress): less nitro from smashes/charge; more tall traffic when nitro on; occasional full green rows for smash fantasy (~20%).
+
+=== HORSE MECHANICS ===
+- Jump: clears lows; buffered input; chain jumps after ramp/train landing if button pressed.
+- Slide: under overhead groups (3–8 gates); slide groups on road; arrows on lows (jump) and arches (slide).
+- Train roof: can jump/slide on parallel train; horse sphere at train end blocked if red roof obstacle between player and sphere.
+- Momentum: builds on clears; affects speed FX and generator pressure at high momentum.
+- Coins: more air paths, ground trails on free lane during actions.
+
+=== ROCKET ===
+- Pickup after ~30s; max 2/song; cooldown ~14s.
+- Phases: anticipation (slow climb, muffle audio) → launch arc → plateau → fall → return car.
+- Camera: lag below, top-down at plateau, overshoot bounce; road dims under rocket.
+- Coins spawn along rail pattern during flight. Track-end: obstacles stop ~5s before end; music fade ~10s.
+
+=== TRAIN & RAMP ===
+- Parallel train: ride on roof, separate scroll speed; companion train shorter.
+- Ramp (~2.5% rows): launch airborne ~3s flight, tricks add nitro/coins; can break tall on landing frame.
+- Red walls: full-row tall gates; need ramp lead (~3 rows) to jump over.
+
+=== LEVEL GENERATOR (essence) ===
+- Chunk-based (30m), seeded per session; density 0.28–0.86 + music delta + long-run ramp (after ~22s, full ~150s).
+- Weights: obstacles 59%, coins 30%, bonus 10%.
+- Per row: often 1–2 blocked lanes (twoObstacleBias 0.5); tall chance ~42%; early rows bias more tall (earlyTallBias).
+- Walls (~7%): all lanes blocked except one low corridor.
+- Destroy: micro clusters 2–3; mediumDensityScale 1.05; nitro-challenge rows when bar ready.
+- Lane flow: lane 2 = risk zone (more obstacles/coins).
+- Lane commitment: staying one lane ~3.2s (2.35s under nitro) → planner may place tall on stagnant lane (passability checked).
+- Horse chunks: jump/slide groups, dodge-only tall, convertible slide + shoulder punish.
+- Passability: unit-tested lane graph (micro ignored); physical length affects collision only.
+- Track end: no new obstacles last 5s of song.
+
+=== MUSIC & DIRECTOR ===
+- AudioAnalyzer → MusicState (energy, beat, phase). Director → DirectorIntent[] (speed, density, VFX, fog…).
+- Consumers ease intents; LevelGen gets numeric multipliers only.
+- Beat pulse: road dashes, object bounce; strong pulse (high energy) → sky pulse.
+- Music scenes: timed patterns (ramps, coin paths) scheduled by phase changes.
+- Phrase/section hooks exist; car/horse phase planners optional (often off in config).
+
+=== VISUAL / UX ===
+- Car: cool blue player, yellow/green destroyables, red trucks, orange arches.
+- Horse: warm palette, rounded obstacles, markers on actions.
+- Rocket: purple environment, dimmed road objects.
+- Damage: player color tiers; brief hit iframe ~0.8s; destroy = blink not HP bar.
+- Combo badge 3D behind player (HUD combo hidden in destroy).
+- Game over: overlay immediately; input blocked 2s before restart.
+- Video background: horizon mode default; timeline hidden (T toggles).
+- Portal horse→car: cyan arch, larger arrow; ~1.1s collision grace after exit.
+- Knockback (destroy): yellow medium = soft lateral; green = explosive knockback through player.
+- VFX toggles in debug: blur, shake, wind, pulse, etc.
+
+=== AUDIO UX (non-obvious) ===
+- Volume via GainNode only (never video.muted).
+- Nitro: treble shelf + gain bump.
+- Rocket: muffle in anticipation → turbo snap on launch.
+- Damage: global light lowpass/wet on hit (all modes).
+- Track end fade last 10s.
+
+=== CONTROLS (typical) ===
+- A/D or arrows: lanes.
+- Space: jump (car ramp / horse jump); slide when horse under arch context.
+- Nitro: separate key (config); auto-smash when full bar hits in destroy.
+- Restart after game over: after 2s delay.
+
+=== ARCHITECTURE NOTE (for agents) ===
+- core/ pure TS; render/ only Three.js; one-way Audio→Director→intents→consumers.
+- Configs: configs/*.default.json + hot reload.
+- Do not use obstacle sizes for isPassable tests — lane-based only.
+
+=== OPEN / ROUGH EDGES ===
+- Long truck compaction vs passability not fully aligned (zExtent).
+- Beta plan in docs/beta-plan-v2.txt; prototype stage.
+- Playtest tuning ongoing: late nitro traffic, truck length feel.
+
+END

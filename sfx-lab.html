@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Runner · Звуковая лаборатория</title>
+<style>
+:root{color-scheme:dark;font:15px/1.5 system-ui;background:#111720;color:#dae5ed}body{max-width:1080px;margin:40px auto;padding:0 24px}h1{font-size:32px;margin:0}h2{font-size:18px;margin:0 0 14px}p{color:#9cabbc}small{color:#9cabbc}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{padding:22px;background:#192430;border:1px solid #304253;border-radius:12px;margin:18px 0}button{background:#253b4b;border:1px solid #456477;border-radius:7px;color:#eaf4fa;padding:10px 13px;margin:4px;cursor:pointer}select{background:#111720;color:#dae5ed;border:1px solid #456477;border-radius:6px;padding:9px;max-width:100%}button[data-reworked="true"]{border-color:#6ebea2}button:hover{background:#355667}button:disabled{opacity:.5;cursor:wait}.primary{background:#255a50}label{display:block;margin:12px 0}input[type=range]{width:60%;vertical-align:middle}pre{white-space:pre-wrap;font:12px/1.5 monospace;max-height:310px;overflow:auto}#status{min-height:24px;color:#89d2b6}audio{width:100%}.pill{display:inline-block;font:12px monospace;color:#89d2b6;margin-bottom:12px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<span class="pill">MUSIC DIRECTOR RUNNER / AUDIO LAB</span><h1>Масса. Скорость. Музыка.</h1>
+<p>Игровые звуки: процедурный синтез и MP3 ракеты. Начните с умеренной громкости; оцените их вместе со своим треком.</p>
+<section class="panel"><h2>Новая палитра · сравнение A/B</h2>
+<p>Шесть переработанных звуков. A — прежний синтез, B — новый. В игре уже используется B.</p>
+<label>Сцена <select id="compareSound"><option value="hit">Удар: лёгкий → сильный</option><option value="canister">Баллон: одиночный → серия</option><option value="smash">Разрушение: лёгкое → тяжёлое</option><option value="coin">Монеты: одиночная → серия</option><option value="motor">Двигатель: разгон → сброс нагрузки</option><option value="hoof">Конь: ускоряющийся галоп</option></select></label>
+<label><input id="matchLevel" type="checkbox" checked> Сравнять уровень для оценки тембра</label>
+<button id="compareBefore">A · Прежний</button><button id="compareAfter" class="primary">B · Новый</button><button id="compareDownload">Скачать A → B</button>
+<p id="compareStatus" aria-live="polite">Начните с баллона и двигателя. Выровненный уровень приблизительный; снимите галочку, чтобы сравнить исходный игровой баланс.</p>
+<small>Остальная палитра пока прежняя. После прослушивания этой шестёрки определим направление для остальных звуков.</small>
+</section><div class="grid"><section class="panel"><h2>Движение и полный сценарий</h2>
+<button id="demo" class="primary">Все режимы · 24 секунды</button><button id="stop">Остановить SFX</button>
+<div id="modes"></div><label>SFX <input id="volume" type="range" min="0" max="1" step=".01" value=".48"></label>
+<label><input id="enabled" type="checkbox" checked> Игровые звуки включены</label>
+<button id="render">Проверить и скачать демо WAV</button><p id="status">Готово к прослушиванию</p>
+</section><section class="panel"><h2>Сравнение с музыкой</h2>
+<input id="track" type="file" accept="audio/*,video/mp4,video/webm"><p><small>Файл остаётся на вашем компьютере. Музыка и SFX регулируются независимо.</small></p>
+<audio id="music" controls></audio><label>Музыка <input id="musicVolume" type="range" min="0" max="1" step=".01" value=".8"></label>
+<p><small>Для проверки: тихий куплет → плотный припев → серия баллонов → удар. Ритм и вокал должны оставаться главным содержанием.</small></p>
+</section></div>
+<section class="panel"><h2>Отдельные действия</h2><p><small>Зелёной рамкой выделены переработанные звуки.</small></p><div id="patches"></div></section>
+<section class="panel"><h2>Диагностика</h2><pre id="diagnostics">Контекст создаётся после нажатия кнопки.</pre><pre id="measurements"></pre></section>
+<script type="module" src="/src/dev/sfxLab.ts"></script></body></html>

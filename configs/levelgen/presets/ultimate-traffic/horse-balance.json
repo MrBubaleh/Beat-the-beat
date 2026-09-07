@@ -1,0 +1,10 @@
+{
+  "horse": {
+    "actionChunkProbability": 0.9,
+    "mandatoryActionProbability": 0.76,
+    "restChunkProbability": 0.035,
+    "dodgeOnlyProbability": 0.3,
+    "jumpFollowupProbability": 0.56,
+    "slideFollowupDodgeProbability": 0.5
+  }
+}

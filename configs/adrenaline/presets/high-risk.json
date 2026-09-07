@@ -1,0 +1,10 @@
+{
+  "passiveDrainPerSecond": 6.8,
+  "idleLaneDrainBonus": 1.85,
+  "collisionDamage": 30,
+  "gainCoin": 1.4,
+  "gainSmash": 18,
+  "criticalNitroGainMultiplier": 1.7,
+  "damagedThresholdPercent": 50,
+  "criticalThresholdPercent": 25
+}

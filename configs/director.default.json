@@ -1,0 +1,86 @@
+{
+  "scoring": {
+    "wEnergy": 1.2,
+    "wStress": 0.45,
+    "wPhaseElapsed": 0.3,
+    "wBrightness": 0.4,
+    "cooldownPenalty": 0.5
+  },
+  "music": {
+    "speedEnergyInfluence": 1.0,
+    "vfxEnergyInfluence": 1.0,
+    "speedFloor": 1.0,
+    "sectionEnergy": {
+      "attackSeconds": 0.25,
+      "releaseSeconds": 1.2
+    }
+  },
+  "phases": {
+    "calm": {
+      "minDurationSeconds": 2,
+      "cooldownAfterExitSeconds": 2,
+      "center": 0.15,
+      "intents": [
+        { "target": "speed", "value": 1.0, "priority": 0, "tag": "phase:calm" },
+        { "target": "obstacleDensity", "value": 0.15, "priority": 0, "tag": "phase:calm" },
+        { "target": "vfxIntensity", "value": 0.12, "priority": 0, "tag": "phase:calm" },
+        { "target": "coinFrequency", "value": 0.75, "priority": 0, "tag": "phase:calm" }
+      ]
+    },
+    "buildUp": {
+      "minDurationSeconds": 2,
+      "cooldownAfterExitSeconds": 2,
+      "center": 0.45,
+      "intents": [
+        { "target": "speed", "value": 1.0, "priority": 0, "tag": "phase:buildUp" },
+        { "target": "obstacleDensity", "value": 0.5, "priority": 0, "tag": "phase:buildUp" },
+        { "target": "vfxIntensity", "value": 0.5, "priority": 0, "tag": "phase:buildUp" },
+        { "target": "coinFrequency", "value": 0.65, "priority": 0, "tag": "phase:buildUp" }
+      ]
+    },
+    "intense": {
+      "minDurationSeconds": 2,
+      "cooldownAfterExitSeconds": 3,
+      "center": 0.7,
+      "intents": [
+        { "target": "speed", "value": 1.18, "priority": 0, "tag": "phase:intense" },
+        { "target": "obstacleDensity", "value": 0.75, "priority": 0, "tag": "phase:intense" },
+        { "target": "vfxIntensity", "value": 0.78, "priority": 0, "tag": "phase:intense" },
+        { "target": "coinFrequency", "value": 0.45, "priority": 0, "tag": "phase:intense" }
+      ]
+    },
+    "peak": {
+      "minDurationSeconds": 2,
+      "cooldownAfterExitSeconds": 6,
+      "center": 0.9,
+      "intents": [
+        { "target": "speed", "value": 1.32, "priority": 0, "tag": "phase:peak" },
+        { "target": "obstacleDensity", "value": 1.0, "priority": 0, "tag": "phase:peak" },
+        { "target": "vfxIntensity", "value": 1.0, "priority": 0, "tag": "phase:peak" },
+        { "target": "coinFrequency", "value": 0.65, "priority": 0, "tag": "phase:peak" }
+      ]
+    },
+    "cooldown": {
+      "minDurationSeconds": 2,
+      "cooldownAfterExitSeconds": 1,
+      "center": 0.2,
+      "intents": [
+        { "target": "speed", "value": 1.0, "priority": 0, "tag": "phase:cooldown" },
+        { "target": "obstacleDensity", "value": 0.2, "priority": 0, "tag": "phase:cooldown" },
+        { "target": "vfxIntensity", "value": 0.15, "priority": 0, "tag": "phase:cooldown" },
+        { "target": "coinFrequency", "value": 0.8, "priority": 0, "tag": "phase:cooldown" }
+      ]
+    }
+  },
+  "constraints": {
+    "maxSpeedDeltaPerSecond": 4,
+    "minSecondsBetweenMajorEvents": 6,
+    "minSecondsBetweenCameraChanges": 5,
+    "hysteresisUp": 0.1,
+    "hysteresisDown": 0.18
+  },
+  "defaultIntents": [
+    { "target": "speed", "value": 1.0, "priority": 0, "tag": "phase:calm" },
+    { "target": "obstacleDensity", "value": 0.4, "priority": 0, "tag": "phase:calm" }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "questions": [
+    {
+      "id": "overall",
+      "type": "stars",
+      "prompt": "Общее впечатление",
+      "scaleMinLabel": "совсем не зашло",
+      "scaleMaxLabel": "супер интересно"
+    },
+    {
+      "id": "difficulty",
+      "type": "stars",
+      "prompt": "Сложность",
+      "scaleMinLabel": "слишком легко",
+      "scaleMaxLabel": "слишком сложно"
+    },
+    {
+      "id": "favoriteMode",
+      "type": "choice",
+      "prompt": "Что зашло больше",
+      "options": [
+        { "id": "car", "label": "Машина" },
+        { "id": "horse", "label": "Конь" },
+        { "id": "rocket", "label": "Ракета" },
+        { "id": "equal", "label": "Всё равно" }
+      ]
+    },
+    {
+      "id": "fairness",
+      "type": "stars",
+      "prompt": "Справедливость смертей",
+      "scaleMinLabel": "несправедливо",
+      "scaleMaxLabel": "всё честно"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "segmentWeights": {
+    "obstacle": 0.55,
+    "coins": 0.34,
+    "bonus": 0.1,
+    "empty": 0.01
+  },
+  "nitroReadyChallengeProbability": 0.16,
+  "coinRoutes": {
+    "obstacleGuideProbability": 0.55,
+    "riskChoiceProbability": 0.42
+  }
+}

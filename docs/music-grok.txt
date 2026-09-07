@@ -1,0 +1,585 @@
+# Procedural SFX — предложение (Grok)
+
+Дата: 2026-09-03
+Статус: ответы зафиксированы. Контракт — `docs/sfx-design.md`. Код не начат.
+
+Документ — развёрнутое обоснование. Нормативные решения (что делать в коде)
+только в sfx-design.md. Ниже §3/§7/§11 приведены к ответам пользователя.
+
+------------------------------------------------------------------------------
+0. Цель и рамка
+------------------------------------------------------------------------------
+
+Браузерный lane-based 3D-раннер. Музыка — видеотрек через GainNode
+(video.muted запрещён). Сейчас музыка уже «живёт»: damage EQ, nitro shelf,
+rocket muffle/turbo, tutorial detune. Игровых звуков нет: `sfxBus` в
+AudioGraph создан и сразу идёт в master-компрессор, но в него никто не пишет.
+
+Задача: гибкая процедурная SFX-система на Web Audio без WAV на первом этапе.
+Ощущение — серьёзный прототип скорости (Asphalt-слои engine/wind/impact),
+короткие акценты поверх музыки (Beat Cyber / VIP), монеты без оркестра
+(Subway: pitch ladder + limiter). SFX подчинены музыке, не конкурируют с ней.
+
+Не трогаем: UI screens / product shell / бандл треков, LevelGen, Director,
+fairness, хитбоксы и визуал (кроме точечного emit событий из GameSim, если
+без этого нельзя отличить smash от монеты).
+
+------------------------------------------------------------------------------
+1. Что уже есть в коде (факты, не план)
+------------------------------------------------------------------------------
+
+1.1. Аудиограф (src/audio/AudioGraph.ts)
+
+  video source → musicBus
+    ├→ analyserIn (AudioAnalyzer / Director, не трогаем)
+    └→ damage LP → rocket muffle LP → rocket turbo HS+gain
+       → nitro HS+gain → musicMasterGain → trackEndGain
+       → tutorial HS → master compressor → destination
+
+  sfxBus → master (параллельно музыке, БЕЗ EQ урона/нитро/ракеты)
+
+  Master — жёсткий limiter (threshold -1, ratio 20). Это страховка от
+  клиппинга, не микс-шину. SFX нельзя вешать «поверх» без собственного
+  gain staging: иначе limiter будет давить музыку на каждом ударе.
+
+1.2. Сессия (src/audio/AudioSession.ts)
+
+  Один AudioContext. setMusicMix каждый кадр из bootstrap: damage stress,
+  nitro boost (и зелёный smash как слабый nitro-shelf, если нитро выкл),
+  rocket muffle/turbo. Restart сбрасывает сглаженные mix-параметры.
+  Отдельного sfxVolume / mute SFX нет. Music volume есть (musicBus.gain).
+
+1.3. События геймплея уже почти готовы как «искра VFX»
+
+  GameSnapshot (getSnapshot сплитит one-shot массивы, как VFX):
+  - coinPickups[]           — каждая подобранная монета за кадр (позиция)
+  - nearMissFx[]            — near-miss без урона
+  - dodgeFx[]               — dodge presentation
+  - bonusPicked             — horse | car | rocket (один кадр)
+  - greenSmashFx / stacks   — ЗАТУХАЮЩИЙ пульс, НЕ тип события
+  - runStats.hits / smashes / nitroActivations
+  - player.speed, mode, isAbilityActive, nitroReady (через snapshot),
+    isSliding, airState, airSource, rocketPhase, rocketFx, rocketBoostPulse,
+    damageState, isHit, gameOver, y, lane
+
+  CollisionResult внутри тика (НЕ в snapshot):
+  - microBreakIds[]
+  - coinsCollected (батч за кадр)
+  - hit + hitObstacleId
+
+  Важно: greenSmashFx сейчас общий для трёх разных вещей:
+  - ломание micro (pulse = 1)
+  - smash medium / nitro smash (pulse = 1)
+  - подбор монет (pulse = 0.72)
+  Вывести из него «звук micro» vs «звук smash» vs «звук монеты» нельзя.
+  Для MVP ударов/ломания нужен отдельный one-shot канал (см. §4.2).
+
+1.4. Уже существующая обработка МУЗЫКИ (не дублировать SFX-ом)
+
+  nitro.audio*:     clearSeconds, shelfGainDb, shelfFrequencyHz, gainBoost
+  rocket.audio*:    muffle (anticipation), turbo shelf+gain (launch/plateau)
+  destroy.damageAudio*: LP + снижение musicMasterGain по HP
+  tutorial:         playbackRate + highshelf detune
+  greenSmashFx:     слабый nitro-shelf на музыке, когда нитро выкл
+
+  SFX нитро/ракеты — ЭТО ДРУГОЙ СЛОЙ: one-shot arm/activate + непрерывный
+  sustain/whoosh. EQ музыки оставляем как есть. Не усиливать те же частоты
+  вторым highshelf на sfxBus.
+
+------------------------------------------------------------------------------
+2. Предлагаемая архитектура
+------------------------------------------------------------------------------
+
+Однонаправленный поток, в духе Director:
+
+  GameSim.fixedUpdate
+    → (опционально) push в sfxEventQueue
+    → getSnapshot() отдаёт snapshot + sfxEvents[] (splice, как coinPickups)
+  bootstrap / GameLoop (variableUpdate, тот же кадр что сцена)
+    → SfxDirector.tick(snapshot, dt)     // чистый TS, без AudioContext
+    → SfxCommand[]
+  SfxEngine.apply(commands, audioTime)   // Web Audio, только audio/
+    → voices → sfx sub-buses → существующий sfxBus → master
+
+Слои:
+
+  src/core/sfx/
+    types.ts          SfxEventId, SfxPriority, SfxCommand
+    SfxDirector.ts    routing, cooldown, voice limit, duck decisions
+    (тесты без AudioContext)
+
+  src/audio/sfx/
+    SfxEngine.ts      пулы голосов, start/stop continuous
+    patches/*.ts      процедурные патчи (osc + noise + envelope + filter)
+    buses подключаются к AudioGraph.sfxBus
+
+  configs/sfx.default.json
+    Zod в schemas.ts, fallback в fallbacks.ts, ключ ConfigKey = 'sfx'
+    Hot-reload уже сработает: vite-плагин шлёт key из имени файла
+    (sfx.default.json → key "sfx"). Нужно только зарегистрировать ключ.
+
+Почему SfxDirector в core, а не в audio:
+  - core не импортирует audio/DOM/Three (ESLint).
+  - Voice limit / cooldown / приоритеты — чистая логика, как Combo/Health.
+  - Тесты не мокают AudioContext.
+  - Replay/pause: директор ест snapshot, не «мир».
+
+Почему НЕ класть синтез в core:
+  OscillatorNode / BufferSource — это audio/. Consumers применяют команды,
+  как Camera применяет intents.
+
+Почему НЕ новый EventBus на весь проект:
+  Уже есть паттерн one-shot массивов в snapshot. Расширяем его одним полем
+  `sfxEvents`, а не плодим 8 массивов smashFx/hitFx/landingFx.
+
+Интеграция в AudioGraph (минимальная, музыкальную цепь не трогаем):
+
+  sfxBus (уже есть)
+    ← sfxMasterGain          // sfxVolume 0..1, mute, global duck
+      ← busHit               // приоритет 0
+      ← busAbility           // nitro/rocket one-shots
+      ← busImpact            // smash / landing
+      ← busPickup            // coins, micro, combo
+      ← busFoley             // lane scrape, near-miss, mode sting
+      ← busAmbient           // engine + wind (continuous)
+
+  Ducking (предлагаемый дефолт, вопрос Q2/Q6):
+  - На hit: краткий duck pickup+ambient (~80–150 ms, -6..-8 dB), музыку
+    НЕ трогаем — её уже душит damage LP.
+  - На smash: лёгкий duck pickup (~60 ms, -3 dB).
+  - Нитро/ракета SFX не дублируют music shelf; ambient (engine) чуть
+    уступает ability-whoosh, чтобы не было двух «двигателей».
+
+Pause / restart / game over:
+  - pause: freeze continuous (gain → 0 с коротким release), one-shots не
+    играют.
+  - prepareRestart/restart: stop all voices, reset director clocks.
+  - tutorial slow-mo: по умолчанию SFX НЕ тянем playbackRate музыки
+    (иначе удар звучит «как пластинка»). Можно позже привязать только
+    continuous. Это вопрос Q8.
+
+------------------------------------------------------------------------------
+3. Scope: что берём / откладываем / добавляем
+------------------------------------------------------------------------------
+
+Легенда:
+  MVP     — фазы кода 1–6 (конь — фаза 6, но в MVP)
+  P2      — фаза 7, после устойчивого микса MVP
+  SKIP    — не в этой системе / не сейчас
+  ADD     — не было в исходном списке, взяли в контракт
+
+3.1. MVP (высокий ROI, закрывает «игра молчит»)
+
+  ID   Событие                         Источник данных
+  ---  ------------------------------  ---------------------------------
+  1    Hit (урон HP), 3 severity       sfxEvents + damageState
+                                       light  = normal → damaged
+                                       heavy  = damaged → critical
+                                       fatal  = critical → gameOver
+  2    Micro green break               sfxEvents (НЕ greenSmashFx)
+  3    Medium green smash              sfxEvents (destroy car smash /
+                                       nitro smash / landing-on-low)
+  4    Wind continuous                 player.speed (норма 0..1 к cap)
+  5    Engine continuous               профили car / horse / rocket
+                                       (один голос, morph параметров)
+  6    Nitro: arm / activate /         nitroReady edge, isAbilityActive,
+       sustain / release               interrupt
+       Rocket: pickup sting +          bonusPicked, rocketPhase,
+       sustain/fall/release            rocketFx, rocketBoostPulse
+  12   Coins                           coinPickups[] + limiter
+
+  ADD  Game over sting                 player.gameOver rising
+       (отдельно от fatal hit)
+  ADD  Mode sting car↔horse↔rocket     bonusPicked / mode edge
+  10   Horse landing (мягче машины)    airSource === horseJump   [MVP по Q5]
+  11   Horse slide: start/loop/exit    isSliding                 [MVP по Q5]
+       Horse jump start + air bed      airState / airSource
+
+Почему engine horse/rocket в MVP: таблица параметров того же continuous-голоса.
+
+Почему полный конь в MVP (Q5): пользователь явно взял jump/slide/land сразу,
+не «тишину до фазы 2». Реализация коня — отдельная фаза кода после микса
+машины (фаза 6), но это всё ещё MVP, не «потом когда-нибудь».
+
+Почему game over и mode sting в MVP: иначе переходы немые, смерть = ещё один hit.
+
+3.2. Фаза 2 (после того как MVP не грязнит микс)
+
+  7    Lane switch scrape/whoosh       player.lane edge (НЕ loop колёс)
+  8    Wind mod: поворот /             laneX vel, rocketV, airState
+       взлёт-падение ракеты
+  9    Car landing thud                airState → grounded, airSource
+       (ramp / trainRoof)
+  ADD  Near-miss swoosh                nearMissFx[]
+  ADD  Combo milestone 5/10/20         combo rising, редкий accent
+
+3.3. Сознательно не берём
+
+  - WAV / набор семплов (этап 2 системы, отдельное решение)
+  - Пространственный HRTF / полный panning на 5 полос (достаточно
+    лёгкого pan по laneX для pickup/hit)
+  - UI-звуки меню (screens/ не трогаем)
+  - Beat-sync SFX к Director beat (музыка уже несёт ритм; SFX — акцент
+    геймплея). Позже можно лёгкий quantize монет, не сейчас
+  - Отдельный «звук колёс» / loop шин — пользователь явно против
+  - Дублирование music EQ нитро/ракеты/урона процедурным фильтром на
+    musicBus
+  - Runtime-проверка проходимости, хитбоксы, визуал smash
+  - Слайдер SFX в product HUD — только dev/config sfx.masterGain;
+    UI громкости — отдельная задача (вопрос Q7)
+
+3.4. Приоритет голосов (anti-mud)
+
+  0 hit / gameOver
+  1 ability (nitro activate, rocket launch sting)
+  2 smash / landing
+  3 pickup (micro, coin, combo)
+  4 foley (lane, near-miss, mode sting)
+  5 ambient (engine, wind) — никогда не вытесняют one-shots,
+    только сами давятся duck'ом
+
+Steal: если bus на лимите — глушим самый старый голос того же bus с
+priority >= нового. Hit никогда не теряется (резерв 1 голоса).
+
+------------------------------------------------------------------------------
+4. События: как именно эмитить
+------------------------------------------------------------------------------
+
+4.1. Принцип
+
+  SfxDirector не читает CollisionSystem и не подписывается на колбэки
+  GameSim (кроме данных в snapshot). Это сохраняет однонаправленность
+  и replay: проигрыш snapshot даёт те же команды.
+
+4.2. Новое поле snapshot (единственное заметное касание GameSim)
+
+  interface SfxEvent {
+    id: SfxEventId;
+    t: number;          // player.gameTime
+    severity?: number;  // 0..1
+    count?: number;     // монеты за кадр, если решим стэкать
+  }
+
+  GameSnapshot.sfxEvents: readonly SfxEvent[]  // splice в getSnapshot
+
+  Эмиты (точечно, рядом с уже существующими VFX-push):
+
+    hit            — рядом с registerHit / totalHits += 1
+                     severity из damageBefore → after / gameOver
+    micro          — breakMicroObstacle
+    smash          — handleDestroyCarHit smash-ветка, landing-on-low smash,
+                     nitro blast smash (один event на взрыв, не на каждый
+                     сломанный low — иначе оркестр)
+    nitroArm       — nitroReady false→true
+    nitroActivate  — isAbilityActive false→true (вкл. collision blast)
+    nitroRelease   — true→false (топливо / interrupt)
+    rocketPickup   — bonusCollected === 'rocket' (sting; phase дальше
+                     читается из player.rocketPhase как continuous)
+    gameOver       — emitPlaytestGameOverIfNeeded (тот же кадр)
+    modeSwitch     — switchPlayerMode, kind в payload
+
+  НЕ эмитим отдельным событием (директор выводит сам):
+    speed, rocketPhase, isSliding, lane, airState — continuous / edges
+    из player. Монеты — из coinPickups.length (уже one-shot).
+
+  Почему не выводить smash из runStats.smashes:
+    smashes++ есть и у horse action smash (отложенный), и у micro, и у
+    blaster. Нужен явный id, иначе конь будет «бить стеклом» на каждом
+    clear.
+
+4.3. Монеты
+
+  coinPickups уже пачка за кадр. Два режима (вопрос Q3):
+
+    A) Pitch ladder: каждый pickup в кадре = 1 голос из пула, pitch
+       += N cents, minIntervalMs режет лишние. Как Subway.
+    B) Cluster: 1 звук на кадр, timbre/gain от count (1 / 2–3 / 4+).
+
+  Рекомендация: A с жёстким лимитом (maxVoices=2, minIntervalMs=45,
+  staircase reset через 180 ms тишины). В destroy+нитро монеты идут
+  стеной — без лимитера микс умрёт в первый же заезд.
+
+------------------------------------------------------------------------------
+5. Звуковой дизайн (процедурные патчи, без WAV)
+------------------------------------------------------------------------------
+
+Общий словарь патча (все числа — tunables в sfx.default.json):
+
+  noise  : BufferSource loop 1–2 s pink/brown (один shared buffer)
+  osc    : saw/triangle/sine, optional 2nd osc detune
+  filter : biquad LP/BP/HP, envelope на frequency
+  env    : gain ADSR (часто AD — короткие one-shots)
+  pitch  : startHz + random cents + velocity/speed tracking
+  pan    : stereoPanner от laneX / event.x
+
+5.1. Hit (урон)
+
+  Характер: короткий body (brown noise + sine thud 80–140 Hz) +
+  mid crack (bandpass noise 800–2k, 30–60 ms). Не «мультяшный бонг»,
+  не металлический удар по рельсу (рельс оставим landing P2).
+
+  light:  thud 90 Hz, decay 90 ms, crack тихий
+  heavy:  thud 70 Hz, decay 160 ms, crack + LP sweep вниз
+  fatal:  heavy + sub 50 Hz 200 ms, затем тишина 80 ms → gameOver sting
+
+  Cooldown 80 ms (iframe и так есть). maxVoices 1 на busHit.
+
+5.2. Micro green
+
+  Лёгкий «хруст/щелчок»: HP noise 2–6 kHz, decay 50–70 ms, pitch
+  чуть выше с каждым подряд (как монеты, но короче и тусклее).
+  Не стеклянная крошка и не лазер. maxVoices 3, minInterval 40 ms.
+
+5.3. Medium smash
+
+  Body 100–180 Hz + mid crunch BP 400–1200 + короткий debris tail
+  (filtered noise 200 ms). Громче micro в ~2×, ниже по тону.
+  Stacks (greenSmashStacks) слегка увеличивают decay, не gain —
+  иначе 6 стеков взорвут limiter.
+  maxVoices 2, cooldown 70 ms.
+
+5.4. Wind (continuous)
+
+  Shared brown-noise → HP ~400 Hz → gain/filter от speedNorm.
+  speedNorm = (speed - windMin) / (cap - windMin), clamp 0..1
+  (windMin взять в духе postfx.windMinSpeed, не дублировать VFX-числа
+  вслепую — свой блок sfx.wind).
+  На нуле почти тишина. На cap — слышный слой, всё ещё под музыкой.
+  Ракета: чуть шире BW (больше «воздуха»), конь: тише и выше HP
+  (меньше «кабины»).
+
+5.5. Engine (continuous, три профиля)
+
+  Не пытаемся изобразить V8 нотами. Слой:
+  - osc saw 40–90 Hz (RPM) + лёгкий 2nd harmonic
+  - noise через BP «выхлоп/поток»
+  - RPM от speed + accel (delta speed) для нарастания
+  - нитро: +RPM и открытие фильтра, БЕЗ второго whoosh, если играет
+    nitro sustain (иначе два мотора)
+
+  car:   низкий, плотный, фильтр 300–900 Hz
+  horse: почти без saw, больше «галоп-шума» очень тихого + air;
+         характер режима добивают jump/slide/land (MVP, фаза 6)
+  rocket: saw уходит, остаётся filtered noise + далёкий тон 120–180 Hz
+          «турбина»; в anticipation — rumble нарастает; в fall —
+          pitch вниз, gain вниз
+
+  Один VoiceEngine на engine, morph параметров при смене mode
+  (crossfade 80–150 ms), не три одновременных лупа.
+
+5.6. Nitro (дополнение к music shelf)
+
+  arm (ready):     тихий rising BP 400→1200, 200 ms, один раз
+  activate:        snap: noise burst 40 ms + osc drop 200→80 Hz
+  sustain:         filtered noise loop, gain низкий; музыка уже ярче
+  release/interrupt: быстрый HP close, 80–120 ms
+
+  Не делать «сирену» и не держать громкий луп — musicGainBoost уже
+  даёт ощущение мощности.
+
+5.7. Rocket (дополнение к muffle/turbo)
+
+  pickup sting:    короткий «защёлкнулся» (не фанфара)
+  anticipation:    low rumble (уже есть muffle музыки — rumble тихий)
+  launch:          noise whoosh + sub, 0.3–0.5 s; совпадает с turboSnap
+  plateau/cruise:  sustain quieter чем launch
+  fall:            air + pitch down, стыкуется с wind
+  return to car:   мягкий thud (можно отложить в P2 landing)
+
+5.8. Coins
+
+  Два коротких частичных: sine 880–1320 Hz (10–18 ms) + очень тихий
+  noise tick. Pitch ladder +1..3 полутона на серию. Никакого арпеджио
+  на 8 осцилляторах. Gain pickup-шины заведомо ниже smash.
+
+5.9. Game over / mode sting (ADD)
+
+  gameOver: низкий аккорд-жест (два sine 80+120, decay 0.6–0.9 s) +
+  noise bed. Музыка в этот момент уже под damage; sting должен быть
+  слышен, но не «брасс из JRP».
+  mode: 120–180 ms FM/noise swipe, разный pitch для horse (выше) /
+  car (средне) / rocket (шире). Не мелодия.
+
+5.10. Конь one-shots (MVP, фаза 6) и фаза 2
+
+  horse jump:  короткий lift (noise + восходящий фильтр), air bed тихий
+  horse land:  soft body, без металла
+  slide:       один патч, gate по isSliding (loop внутри envelope)
+
+  Фаза 2:
+  lane:        40–70 ms filtered noise, pan к новой полосе
+  near-miss:   тихий HP swoosh 80 ms, cooldown 200 ms
+  car landing: metal-ish: noise + sine 120 Hz, decay 120 ms
+  combo 5/10/20: один акцент, НЕ на каждое увеличение combo
+
+------------------------------------------------------------------------------
+6. Конфиг (черновик формы, не финальные числа)
+------------------------------------------------------------------------------
+
+configs/sfx.default.json — отдельный файл, не раздувать game.default.json.
+Музыкальные EQ нитро/ракеты ОСТАЮТСЯ в game (они про musicBus).
+
+  {
+    "masterGain": 0.22,
+    "musicBedGainHint": 1.0,          // не трогает musicBus; документация
+    "enabled": true,
+    "ducking": {
+      "hitPickupDb": -7,
+      "hitAmbientDb": -5,
+      "hitMs": 120,
+      "smashPickupDb": -3,
+      "smashMs": 70
+    },
+    "voices": {
+      "hit":     { "max": 1, "cooldownMs": 80,  "bus": "hit" },
+      "smash":   { "max": 2, "cooldownMs": 70,  "bus": "impact" },
+      "micro":   { "max": 3, "cooldownMs": 40,  "bus": "pickup" },
+      "coin":    { "max": 2, "cooldownMs": 45,  "bus": "pickup" },
+      "ability": { "max": 2, "cooldownMs": 100, "bus": "ability" },
+      "sting":   { "max": 1, "cooldownMs": 250, "bus": "foley" }
+    },
+    "coin": {
+      "mode": "ladder",               // ladder | cluster  (Q3)
+      "ladderCents": 70,
+      "ladderResetMs": 180,
+      "baseHz": 980
+    },
+    "wind":  { "minSpeed": 8, "gainMax": 0.12, "hpHz": 420 },
+    "engine": {
+      "car":    { "baseHz": 55, "gain": 0.10, "filterHz": 520 },
+      "horse":  { "baseHz": 70, "gain": 0.05, "filterHz": 900 },
+      "rocket": { "baseHz": 140, "gain": 0.08, "filterHz": 1400 }
+    },
+    "hit":   { "light": {...}, "heavy": {...}, "fatal": {...} },
+    "nitro": { "arm": {...}, "activate": {...}, "sustainGain": 0.06 },
+    "rocket":{ "launch": {...}, "sustainGain": 0.07 }
+  }
+
+Каждый one-shot: gain, pitchRangeCents, attackMs, decayMs, filterHz,
+q, noiseMix, cooldownMs, maxVoices, bus.
+
+Hot-reload: патчи читают актуальный config каждый start(); continuous
+голоса подтягивают gain/filter плавно (setTargetAtTime), без перезапуска
+осциллятора на каждый JSON.
+
+Невалидный sfx.json → fallback при старте, предыдущее значение при HMR
+(как остальные ключи ConfigStore).
+
+------------------------------------------------------------------------------
+7. Фазы реализации (после ответов, не сейчас)
+------------------------------------------------------------------------------
+
+  Фаза 0  — этот документ + ответы → docs/sfx-design.md (короткий контракт)
+
+  Фаза 1  Инфра + 1 тестовый звук
+          - ключ конфига sfx, schema, fallback
+          - AudioGraph: sfxMasterGain + 1 sub-bus (можно сразу все шины)
+          - SfxDirector: tick, cooldown, maxVoices
+          - SfxEngine: noise buffer, one-shot voice pool
+          - тестовый патч = hit/light, заведённый на реальный hit
+          - unit: cooldown, steal, routing; без AudioContext
+          - ручная проверка: удар слышен, музыкальная цепь не сломана
+
+  Фаза 2  Continuous: engine + wind (car), morph на horse/rocket
+          pause/restart mute
+
+  Фаза 3  Impacts: hit severity, micro, smash + sfxEvents в GameSim
+
+  Фаза 4  Coins limiter + ladder/cluster по решению Q3
+
+  Фаза 5  Nitro + rocket one-shots/sustain; game over; mode sting
+
+  Фаза 6  Конь MVP: jump start/air, slide start/loop/exit, мягкий land
+
+  Фаза 7  Фаза 2: lane, near-miss, wind-mod, combo, car landing, полировка
+
+Каждая фаза: typecheck + lint + test, HANDOFF, changelog.
+Playtest-тюнинг чисел — лёгкий чат после фазы 5.
+
+------------------------------------------------------------------------------
+8. Тесты и проверки
+------------------------------------------------------------------------------
+
+Unit (обязательно, без AudioContext):
+  - cooldown: второй hit раньше cooldownMs не даёт команду start
+  - maxVoices steal: третий coin при max=2 → stop oldest + start
+  - priority: hit не вытесняется coin
+  - routing: coin → pickup bus, hit → hit bus
+  - duck: hit выставляет duck pickup на N ms
+  - edges: nitroReady false→true → arm один раз
+  - restart: директор сбрасывает lastTimes / active continuous flags
+  - монеты: 10 pickup в одном кадре → не больше maxVoices команд
+
+Не тестируем на слух в unit. Синтез — ручной playtest + опционально
+позже «dry run» что node.connect не бросает (если понадобится).
+
+Ручная проверка фазы 1:
+  - загрузить трек, получить урон → слышен thud
+  - нитро/ракета music EQ как раньше
+  - громкость музыки не прыгает от появления sfxBus gain=1
+  - пауза не оставляет висящий тестовый тон
+
+------------------------------------------------------------------------------
+9. Риски
+------------------------------------------------------------------------------
+
+  - Master compressor (ratio 20): громкий smash продавит музыку.
+    Лечится низким masterGain SFX и duck только внутренних шин.
+  - Частота монет в destroy: даже ladder без maxVoices=2 убьёт CPU
+    (много OscillatorNode create/disconnect). Пул голосов, не new
+    на каждый pickup.
+  - greenSmashFx как источник звука — ложная экономия, смешает монеты
+    и smash. Потому sfxEvents.
+  - Два «мотора»: engine sustain + nitro sustain + music shelf.
+    Правило: при nitroActive engine.filter открывается, отдельный
+    nitro sustain тише wind, не наоборот.
+  - Tutorial slow-mo + SFX: рассинхрон удара и картинки, если тянуть
+    playbackRate. Дефолт — не тянуть.
+  - iOS/Chrome autoplay: SFX живут в том же AudioContext, что музыка;
+    отдельный resume не нужен, если трек уже играет.
+  - Replay: если забыть прогнать SfxDirector на playback snapshot —
+    реплей будет немым. В фазе 1 сразу вызвать из того же места, что
+    setMusicMix.
+
+------------------------------------------------------------------------------
+10. Файлы, которые предстоит трогать (когда пойдёт код)
+------------------------------------------------------------------------------
+
+  Новые:
+    configs/sfx.default.json
+    docs/sfx-design.md
+    src/core/sfx/types.ts
+    src/core/sfx/SfxDirector.ts
+    src/audio/sfx/SfxEngine.ts
+    src/audio/sfx/patches/*.ts
+    tests/unit/sfxDirector.test.ts
+
+  Правки:
+    src/core/config/schemas.ts      (+ ключ sfx)
+    src/core/config/fallbacks.ts
+    src/core/config/ConfigLoader.ts
+    src/audio/AudioGraph.ts         (шины, не ломая music chain)
+    src/audio/AudioSession.ts       (engine.apply, volume, restart)
+    src/app/bootstrap.ts            (tick рядом с setMusicMix)
+    src/core/gameplay/GameSim.ts    (sfxEvents push + snapshot field)
+    src/core/gameplay/GameSim.ts    типы GameSnapshot
+
+  Не трогать:
+    src/ui/screens/, Director, LevelGen, fairness, video.muted,
+    хитбоксы, ObstacleModels, product shell.
+
+------------------------------------------------------------------------------
+11. Ответы пользователя (зафиксировано 2026-09-03)
+------------------------------------------------------------------------------
+
+  Q1  тёмный нейтральный (рекомендация)
+  Q2  подложка + акценты, пик SFX тише музыки (рекомендация)
+  Q3  ladder каждая + max 2 голоса + ~45 мс (рекомендация)
+  Q4  двигатель всегда с порога скорости (рекомендация)
+  Q5  полноценный набор коня в MVP (не рекомендация; jump/slide/land)
+  Q6  музыку на hit не глушить (рекомендация)
+  Q7  только конфиг / hot-reload (рекомендация)
+  Q8  SFX в реальном времени, высоту не тянуть (рекомендация)
+
+Контракт: docs/sfx-design.md. Код — только после явного разрешения.
+)

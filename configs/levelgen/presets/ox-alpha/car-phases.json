@@ -1,0 +1,28 @@
+{
+  "car": {
+    "phasesEnabled": true,
+    "phaseMinChunks": 2,
+    "phaseMaxChunks": 4,
+    "phaseWeights": {
+      "stream": 0.3,
+      "weave": 0.3,
+      "breather": 0.21,
+      "nitroTease": 0.19
+    },
+    "waveMinChunks": 4,
+    "waveMaxChunks": 8,
+    "waveIntensityPeak": 0.85,
+    "longRunWeaveWeightBonus": 0.16,
+    "longRunNitroTeaseWeightBonus": 0.14,
+    "longRunBreatherWeightPenalty": 0.12,
+    "streamLaneStickiness": 0.74,
+    "streamDensityScale": 0.95,
+    "weaveDensityScale": 1.08,
+    "weaveMultiObstacleBiasBonus": 0.18,
+    "breatherDensityScale": 0.55,
+    "breatherObstacleWeightScale": 0.7,
+    "nitroTeaseDensityScale": 1.1,
+    "nitroTeaseReadyChallengeMultiplier": 1.7,
+    "nitroTeaseCoinFrequencyMultiplier": 1.2
+  }
+}

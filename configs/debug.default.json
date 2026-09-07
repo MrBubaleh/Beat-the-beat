@@ -1,0 +1,15 @@
+{
+  "prototypeMode": false,
+  "recording": {
+    "enabled": false,
+    "autoExport": false
+  },
+  "timeline": {
+    "zoomSecondsPerScreen": 15
+  },
+  "overlay": {
+    "showFps": true,
+    "showStates": true,
+    "showIntents": true
+  }
+}

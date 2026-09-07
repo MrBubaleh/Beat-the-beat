@@ -1,0 +1,6 @@
+{
+  "passiveDrainPerSecond": 4.5,
+  "idleLaneDrainBonus": 2.2,
+  "damagedThresholdPercent": 50,
+  "criticalThresholdPercent": 25
+}

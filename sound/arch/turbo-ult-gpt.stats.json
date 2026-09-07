@@ -1,0 +1,149 @@
+{
+  "duration": 12.8,
+  "frames": 564480,
+  "sampleRate": 44100,
+  "channels": 2,
+  "bitsPerSample": 16,
+  "sourceMap": {
+    "beginning": "rocket-flight.wav",
+    "flight": "turbo-synth.wav",
+    "landingAndTail": "rocket-flight.wav",
+    "air": "rocket-flight-cinematic.wav: 1700 Hz highpass / 7600 Hz lowpass, stereo enhancement; filtered mixture, not an isolated stem"
+  },
+  "timing": {
+    "launch": 2.5,
+    "plateau": 5.5,
+    "cruise": 6.35,
+    "cutoff": 10.27,
+    "landing": 11.27
+  },
+  "mix": {
+    "rocketGain": 1,
+    "turboGain": 0.92,
+    "windGain": 1.1,
+    "windSideGain": 1.2,
+    "windHighpassHz": 1700,
+    "windLowpassHz": 7600,
+    "launchBlendSeconds": 0.006,
+    "landingBlendSeconds": 0.05,
+    "limiterKnee": 0.885,
+    "limiterCeiling": 0.945
+  },
+  "preLimitPeak": 1.7349574934840204,
+  "limitedPercent": 5.133308531746032,
+  "peakType": "sample peak from saved PCM",
+  "master": {
+    "peakL": 0.945037841796875,
+    "peakR": 0.945037841796875,
+    "rmsL": 0.48394737587219455,
+    "rmsR": 0.489780306844833,
+    "rmsDbFS": -6.25169373437754,
+    "correlation": 0.10566235582335413
+  },
+  "phases": [
+    {
+      "name": "Anticipation",
+      "start": 0,
+      "end": 2.5,
+      "peakL": 0.785247802734375,
+      "peakR": 0.7989501953125,
+      "rmsL": 0.28344425147760777,
+      "rmsR": 0.28092292507469546,
+      "rmsDbFS": -10.989278286871759,
+      "correlation": 0.5276235193968483
+    },
+    {
+      "name": "Launch",
+      "start": 2.5,
+      "end": 5.5,
+      "peakL": 0.94500732421875,
+      "peakR": 0.945037841796875,
+      "rmsL": 0.597370559546609,
+      "rmsR": 0.6028408918339598,
+      "rmsDbFS": -4.435354373343253,
+      "correlation": 0.1361830070766624
+    },
+    {
+      "name": "Plateau",
+      "start": 5.5,
+      "end": 6.35,
+      "peakL": 0.945037841796875,
+      "peakR": 0.945037841796875,
+      "rmsL": 0.649403607947445,
+      "rmsR": 0.6881382596324566,
+      "rmsDbFS": -3.4908114944514246,
+      "correlation": -0.04561759269619419
+    },
+    {
+      "name": "Cruise",
+      "start": 6.35,
+      "end": 10.27,
+      "peakL": 0.945037841796875,
+      "peakR": 0.945037841796875,
+      "rmsL": 0.554884632748131,
+      "rmsR": 0.5573664443655161,
+      "rmsDbFS": -5.096521590420532,
+      "correlation": 0.04330432924600881
+    },
+    {
+      "name": "Fall",
+      "start": 10.27,
+      "end": 11.27,
+      "peakL": 0.944305419921875,
+      "peakR": 0.94500732421875,
+      "rmsL": 0.3544884409815551,
+      "rmsR": 0.35749352548977387,
+      "rmsDbFS": -8.971142672438035,
+      "correlation": -0.012021099060895234
+    },
+    {
+      "name": "Touchdown & fade",
+      "start": 11.27,
+      "end": 12.8,
+      "peakL": 0.83404541015625,
+      "peakR": 0.8427734375,
+      "rmsL": 0.1519675444490684,
+      "rmsR": 0.1510238894576566,
+      "rmsDbFS": -16.39195077914211,
+      "correlation": 0.9901346793796063
+    }
+  ],
+  "sourcePhaseRms": [
+    {
+      "name": "Anticipation",
+      "rocket": -10.989277653609744,
+      "turbo": -12.166362254337661,
+      "cinematic": -17.005657334209733
+    },
+    {
+      "name": "Launch",
+      "rocket": -8.8340255271768,
+      "turbo": -3.74259135066311,
+      "cinematic": -11.941240758937015
+    },
+    {
+      "name": "Plateau",
+      "rocket": -8.209146771250076,
+      "turbo": -2.7900385175030893,
+      "cinematic": -10.477441683186068
+    },
+    {
+      "name": "Cruise",
+      "rocket": -8.461453768110854,
+      "turbo": -4.539336170020121,
+      "cinematic": -12.212774440753433
+    },
+    {
+      "name": "Fall",
+      "rocket": -17.617981803128483,
+      "turbo": -8.263336343748618,
+      "cinematic": -18.942182747825758
+    },
+    {
+      "name": "Touchdown & fade",
+      "rocket": -16.391947377422206,
+      "turbo": -11.706533671535313,
+      "cinematic": -14.732527186453883
+    }
+  ]
+}

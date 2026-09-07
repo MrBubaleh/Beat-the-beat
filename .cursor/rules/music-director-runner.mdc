@@ -1,0 +1,44 @@
+---
+description: Music Director Runner — архитектура, конфиги и запреты
+alwaysApply: true
+---
+
+# Music Director Runner
+
+## Архитектура
+
+- `src/core/` — чистый TS: zero импортов из render/audio/input/app/ui, Three.js, DOM.
+- Однонаправленный поток: AudioAnalyzer → MusicState → Director → DirectorIntent[] → consumers.
+- `Director` — единственный источник `DirectorIntent[]`.
+- `LevelGenerator` — только numeric intents; никогда не читает audio.
+- `Gameplay` пишет `PlayerState`, не читает `MusicState`.
+- Consumers сами применяют easing к интентам.
+- `render/` — единственный слой с Three.js.
+
+## Конфиги
+
+- Tunables в `configs/*.default.json`, валидация Zod, fallback в `src/core/config/fallbacks.ts`.
+- Hot-reload без перезагрузки: `configHotReload` (vite) → ws `config:update` → `configHotReload.ts` → HMR в `ConfigLoader.ts`.
+- Невалидный конфиг не ломает игру: fallback при старте, предыдущее значение при hot-reload.
+
+## Запреты и соглашения
+
+- Не использовать `video.muted` — только GainNode для аудиопотока.
+- Не добавлять комментарии в код без запроса.
+- Проверка проходимости уровня — только unit-тесты (`isPassable`), без рантайм-проверок.
+- Tick: fixedUpdate 60 Hz (геймплей), variableUpdate (камера/VFX), render (rAF), audioWorklet.
+
+## Документация (экономия токенов)
+
+- Старт: `status.md` HANDOFF only.
+- История: `changelog.md` — prepend новых записей; читать grep'ом, не целиком.
+- План: `docs/update1-plan.md` §1–2; контракты: `docs/update1-design.md`.
+- Полный протокол обновления docs и выбора модели — `agents.md`.
+- Неоднозначности в задаче — **уточняй у пользователя** до кода (`agents.md` § «Уточнения у пользователя»).
+- Ответ пользователю — русский. Внутренние рассуждения — родной язык модели (экономия токенов).
+
+## Обязанности агента
+
+После значимой работы **без напоминания**: обновить `status.md` + при необходимости `changelog.md`.
+
+В **каждом** ответе по новой задаче: строка «Модель: …». При несоответствии чата задаче — блок **«Переход в … чат»** с готовым промптом в fenced code block для копирования.

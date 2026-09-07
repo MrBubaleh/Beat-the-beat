@@ -1,0 +1,12 @@
+{
+  "passiveDrainPerSecond": 7.2,
+  "drainRampSeconds": 40,
+  "drainStartScale": 0.7,
+  "idleLaneSeconds": 1.6,
+  "idleLaneDrainBonus": 1.95,
+  "gainSmash": 18,
+  "gainCoin": 1.8,
+  "gainNearMiss": 4,
+  "gainHorseJumpClear": 10,
+  "gainHorseSlideClear": 8
+}

@@ -1,0 +1,14 @@
+{
+  "coinRoutes": {
+    "obstacleGuideProbability": 0.52,
+    "riskChoiceProbability": 0.43
+  },
+  "longRunDifficulty": {
+    "maxDensityBonus": 0.055,
+    "maxMultiObstacleBiasBonus": 0.035
+  },
+  "riskZone": {
+    "obstacleWeight": 1.7,
+    "coinWeight": 2.7
+  }
+}

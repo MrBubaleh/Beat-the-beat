@@ -1,0 +1,2884 @@
+# CHANGELOG.md — история итераций
+
+### [2026-09-07] — Визуал машин и высоких коня (премиум лоуполи) — реализовано
+
+- Игрок: герой-купе (клин, кабина-стекло, LED-бар + рабочие PointLight-фары, стопы).
+- Средние и красные высокие машины: шасси/пояс/решётка, те же фары/стопы; силуэты sedan/hatch/pickup/coupe/wagon и грузовики/автобусы читаемее.
+- Конь, высокие красные: вестерн (дилижанс, вагон, бизон, вагонетка, баррикада, валун) в том же языке — тёмное шасси, tint, хром-пояс.
+- Хитбоксы, цвета tint и логика фар не менялись.
+- Ключевые файлы: `GameScene.ts` (`createSportCarModel`), `ObstacleModels.ts`.
+- Проверки: typecheck ✓, lint ✓, unit 559/559 ✓.
+
+### [2026-09-07] — Пауза/смерть: рестарт и трек; виньетка; ракетные монеты; свайпы — реализовано
+
+- Пауза: Продолжить, Заново, Другой трек (как в меню после смерти и в playtest-оверлее).
+- Виньетка и боковые вуали на узких экранах — широкий эллипс вместо «рамки».
+- Ракета: монеты сразу после выхода на высоту (`rocketClimbSeconds`); не дальше начала падения; `coinEndBufferSeconds` 0.22.
+- Свайпы вверх/вниз/влево/вправо = стрелки (нитро / fast fall / полосы).
+- Ключевые файлы: `HUD.ts`, `EndRunPanel.ts`, `bootstrap.ts`, `rocket.ts`, `InputAdapter.ts`, `swipe.ts`, `shell.css`.
+- Проверки: typecheck ✓, lint ✓, unit 559/559 ✓.
+
+### [2026-09-07] — Меню: ghost, мобильный HUD, шрифты, громкость 75% — реализовано
+
+- Attract-mode: `GameSim.setGhost` — мир едет, коллизии/урон/подборы игрока выключены; меш по-прежнему скрыт.
+- Адаптив: `shell.css` + safe-area; меню, пауза, game over/опрос, нитро/счётчики/звёзды на узких экранах.
+- Меню: Unbounded + Manrope (кириллица), hover/press/focus, превью на наведении.
+- Default master volume 0.75.
+- Проверки: typecheck ✓, lint ✓, unit 556/556 ✓.
+
+### [2026-09-07] — Бета фаза 3: product shell (меню + HUD + громкость) — реализовано
+
+- До трека: главное меню поверх живой сцены; машина скрыта; заголовок «меню»; превью + имена; кнопка «свой файл».
+- Бандл: папка `Deepseek/video/` (не public); Vite отдаёт `/video/` и catalog.json (до 5 файлов).
+- Prod UI без камеры/тени/режима и без счётчиков слева сверху; `?dev=1` — как раньше.
+- Master volume: GainNode на выходе AudioGraph (музыка+SFX), ползунок в меню и на паузе; не `video.muted`.
+- Ключевые файлы: `bootstrap.ts`, `MainMenu.ts`, `AudioGraph.ts`, `vite.videoStatic.ts`, `HUD.ts`, `AudioControls.ts`.
+- Проверки: typecheck ✓, lint ✓, unit 555/555 ✓.
+
+### [2026-09-07] — Сжатие bundled video (ffmpeg CRF 30) — реализовано
+
+- 5 треков: **104 → 65 МБ** (−38%). Оригиналы в `video/_originals/` (в git не идут).
+- Скрипт: `node scripts/compress-videos.mjs`.
+
+### [2026-09-07] — GitHub prep: .gitignore + README — реализовано
+
+- `.gitignore`: node_modules, dist, logs, .tmp, playwright, env; `video/` остаётся в репо.
+- `README.md`: Beat the beat, быстрый старт, треки, управление, проверки.
+- Проверки: typecheck ✓, lint ✓, unit 559/559 ✓, build ✓.
+
+
+- **Принято пользователем:** конь↔машина, fairness/camera/tutorial/obstacles/Gate 4 visual slice.
+- SFX и rocket sample при уроне: тот же lowpass + gain reduction, что у музыки (`AudioGraph.setDamageStress`).
+- Tutorial: статус только в памяти страницы; reload → снова novice; кнопка «новичок» работает в сессии.
+- Ключевые файлы: `AudioGraph.ts`, `TutorialStorage.ts`.
+- Проверки: typecheck ✓, lint ✓, unit 551/551 ✓.
+
+### [2026-09-04] — Проход в портал: желе + EQ-whoosh — реализовано, ждёт playtest
+
+- Контакт с порталом коня/машины (~0.24 с): персонаж сплющивается по Z, кольцо цвета окантовки «проглатывает», лёгкий bounce камеры, осколки, вспышка края.
+- Музыка: короткий lowpass после анализатора (не playbackRate, Director не видит). Ракета/урон не менялись.
+- Геймплей, хитбоксы и момент смены режима без изменений.
+- Ключевые файлы: `HorsePortalBonus.ts`, `GameScene.ts`, `AudioGraph.ts`, `AudioSession.ts`, `bootstrap.ts`.
+- Проверки: typecheck ✓, unit 554/554 ✓.
+
+### [2026-09-04] — Порталы конь/машина, размер +35% — реализовано, ждёт playtest
+
+- Радиус портала коня ×1.35 (`horseBonusVisualScale` 2.8 → 3.78). Куб машины — такой же плоский портал того же размера.
+- Конь: голубая окантовка, открытка Запада. Машина: циан куба + розовый неон города, ночной skyline внутри.
+- Хитбоксы и логика подбора без изменений. Ракета-бонус по-прежнему конус.
+- Ключевые файлы: `HorsePortalBonus.ts`, `GameScene.ts`, `game.default.json`.
+- Проверки: typecheck ✓, unit 553/553 ✓.
+
+### [2026-09-04] — Бонус коня: портал Запада — реализовано, ждёт playtest
+
+- Сфера коня заменена плоским диском того же радиуса, повёрнутым навстречу бегу (не билборд).
+- Внутри — нарисованная открытка Дикого Запада с тепловым искажением; снаружи голубое кольцо + искры (Strange/Prey), не живая сцена.
+- Хитбокс и `horseBonusVisualScale` не менялись. Машина/ракета-бонусы без изменений.
+- Ключевые файлы: `src/render/HorsePortalBonus.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, unit 552/552 ✓.
+
+### [2026-09-04] — Старт уровня + full repair SFX — реализовано, ждёт playtest
+
+- Отсчёт 3 с: `engine start.mp3` в t=0, музыка в t=1.5, разгон с t=0.5, камера сбоку→норма.
+- Blocking low на стартовой полосе 2–4 с после GO; `levelIntro` в `game.default.json`.
+- `full repare.mp3` при переходе `damageState` → `normal` (один раз на heal).
+- Ключевые файлы: `levelIntro.ts`, `bootstrap.ts`, `GameSim.ts`, `GameScene.ts`, `LevelSamples.ts`.
+- Проверки: typecheck ✓, unit 550/550 ✓.
+
+### [2026-09-04] — Поезд: лоуполи N700 — реализовано, ждёт playtest
+
+- Поезд больше не растянутый ящик: нос N700 (утиный клюв) с обоих концов, средние вагоны повторяются по длине.
+- Цвета те же (фиолетовый / голубой, пульс на крыше и полосе). Хитбокс, длина, посадка на крышу не менялись.
+- Детали: кабинные стёкла, фары, юбка, тележки, двери, межвагонные стыки. Крыша плоская — посадка в `landingInset`.
+- Ключевые файлы: `src/render/TrainModel.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, unit 545/545 ✓.
+
+### [2026-09-04] — Ракета: turbo −30%, мгновенный старт — реализовано, ждёт playtest
+
+- `rocketSample.gain` 1.58 → **1.11**; `fadeInMs` 900 → **0** (мгновенный старт при подборе).
+- `RocketSample`: gain сразу на пике, fade-out без изменений.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Ракета: anticipation 1.5 с, музыка/ turbo тайминг — реализовано, ждёт playtest
+
+- `anticipationSeconds` 2.2 → **1.5**; `audioMuffleMax` 0.98 → **0.72** (музыка слышнее в полёте).
+- `audioSampleMusicReleaseSeconds` 0.75 → **1.5**; `AudioSession` держит release после выхода из режима rocket.
+- `fadeOutMs` 1800 → **1290** (падение ~1.0 с + 0.3 с после посадки); `off` не обрывает fade.
+- Ключевые файлы: `game.default.json`, `sfx.default.json`, `AudioSession.ts`, `RocketSample.ts`, `rocket.ts`.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Ракета: TURBO BOOST MP3, anticipation 2.2 с — реализовано, ждёт playtest
+
+- `RocketSample` → `sound/TURBO BOOST sound effect.mp3`.
+- `fadeOutMs` 1500 → 1800; `anticipationSeconds` 2.5 → 2.2.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Ракета: envelope turbo + громче музыка — реализовано, ждёт playtest
+
+- `rocketSample`: fadeInMs 900, fadeOutMs 1500 (экспоненциальный in/out); fall снова гасит gain.
+- `audioSampleMusicGain` 0.48 → 0.56.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Turbo Ultimate: де-харшинг и устранение скрежета во 2-й половине — реализовано
+
+- Устранён металлический скрежет и утомляющий слух дребезг в фазе круиза (5.5–10.3 с):
+  - Фон двигателя и ветра плавно пропущен через тёплый lowpass 2.4 кГц (`bedWarm`, сглаживание перегруженных верхов);
+  - В пролётах объектов резкий амплитудный флаттер (32 Гц глубина 0.40) заменён на мягкую волну (24 Гц глубина 0.18);
+  - С потолка пролётов срезан пик выше 1.9 кГц (было 2.2 кГц), сглажена крутизна доплеровского захода;
+  - Снижена жесткость финального клиппера `tanh(mid * 0.98)` с сохранением пика 0.9450 и стерео-контраста пролётов (+2...+8 dB).
+- Перегенерирован: `sound/turbo-ultimate.wav`.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Ракета: turbo-ultimate.wav в игре, без программного fade — реализовано, ждёт playtest
+
+- `RocketSample` → `sound/turbo-ultimate.wav`; fall не гасит gain (fade в ассете).
+- Удалён `rocketSample.fadeOutMs`; off/pause — короткий cut ~20 мс.
+- Ключевые файлы: `RocketSample.ts`, `sfx.default.json`, `check-sfx.mjs`.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Turbo Ultimate: бинауральные пролёты объектов на бешеной скорости — принято
+
+- Создан и принят финальный объединённый SFX `sound/turbo-ultimate.wav` (12.80 с, PCM16 stereo, 44.1 kHz, пик 0.9450).
+- Базовый слой: старт и финал из `rocket-flight.wav`, плотная середина `turbo-synth.wav`, аэродинамический ветер из `rocket-flight-cinematic.wav`.
+- Добавлен бинауральный слой 7 высокоскоростных пролётов объектов слева и справа с органичным ритмом:
+  - 3.75с (L, +4.3 dB) — массивная арка;
+  - 4.70с (R, +3.6 dB) — скоростная конструкция;
+  - 5.85с (L, +2.9 dB) — сверхзвуковой пролёт на пике плато;
+  - 6.95с (R, +3.4 dB) и 7.35с (L, +2.4 dB) — быстрое сдвоенное комбо («вжух справа — вжух слева»);
+  - 8.45с (R, +7.2 dB) — тяжелая конструкция в середине круиза;
+  - 9.40с (L, +3.8 dB) — бритвенный пролёт слева перед пикированием.
+- DSP: сайдчейн-дакинг противоположного канала (−58%) для акцентирования пролётов в плотном миксе; басовый удар вытеснения воздуха (75 Гц), турбулентный флаттер (32 Гц), резонансный доплеровский сдвиг; срез режущих частот выше 2.2 кГц.
+- Скрипт генерации: `scripts/generate-turbo-ultimate.mjs`.
+- Проверки: typecheck ✓, unit 542/542 ✓.
+
+### [2026-09-04] — Turbo Ultimate GPT: объединение трёх выбранных звуков — реализовано, ждёт прослушивания
+
+- Пользователь выбрал начало и конец rocket-flight.wav, мощную середину turbo-synth.wav и ветер rocket-flight-cinematic.wav.
+- Собран sound/turbo-ult-gpt.wav: 12.80 с, stereo PCM16, 44100 Гц. Исходники не изменены; в игру не подключено.
+- Скрипт sound/build-turbo-ult-gpt.mjs использует только node:fs. Основная часть 2.50–11.27 с, стыки 6/50 мс; воздушный слой выделен фильтрами 1700–7600 Гц с плавной огибающей. Turbo gain 0.92, wind gain 1.1, stereo side ×1.2.
+- Sample peak 0.945038, мягкий ограничитель и TPDF-dither. RMS фаз: −10.99 / −4.44 / −3.49 / −5.10 / −8.97 / −16.39 dBFS. Статистика и инструкция рядом с WAV.
+- PCM/длительность/тишина проверены, Edge декодирует WAV; начало и финал до последних 40 мс отличаются от выбранного источника максимум на 1 шаг PCM16. Измерения не заменяют прослушивание.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### [2026-09-04] — turbo-ult-grok.wav: склейка трёх кандидатов — реализовано, ждёт прослушивания
+
+- 0.00–2.50: начало `rocket-flight.wav`; 2.50–11.27: мощь `turbo-synth.wav` + ветер из `rocket-flight-cinematic.wav` (HP/BP, шире стерео); 11.27–12.80: посадка `rocket-flight.wav`.
+- Кроссфейды 2.47–2.54 и 11.18–11.34; soft-limit пик 0.95 без глобального приглушения старта.
+- Файл: `sound/turbo-ult-grok.wav`. Повтор: `node scripts/mix-turbo-ult-grok.mjs`. Игра на MP3.
+
+### [2026-09-04] — Новый Rocket Flight с нуля по MP3-референсу — реализовано, ждёт прослушивания
+
+- Новый независимый генератор sound/synthesize-rocket-flight.mjs, только node:fs. Прежний генератор и его WAV сохранены; MP3 не используется как сэмпл.
+- MP3 декодирован и измерен: 16.53934 с, пик 0.218, RMS −27.95 dBFS; низ в начальных акцентах, основная середина полёта 450–3000 Гц, ослабленный верх. Измерения — sound/rocket-reference-analysis.json.
+- Новый DSP: октавный розовый/белый шум, расстроенные гармонические роторы, подвижные фильтры, диффузия, сатурация в 88.2 кГц, FIR/downsample, TPDF-dither. Резкий choke, детонация, расширение на плато, голод топлива, отсечка и ускоряющееся падение, посадка и тишина.
+- Итог: sound/rocket-flight-cinematic.wav, PCM16 stereo 44100 Hz, ровно 12.80 с, sample peak 0.940002. RMS фаз: −17.01 / −11.94 / −10.48 / −12.21 / −18.94 / −14.73 dBFS. Статистика и инструкция лежат рядом.
+- Проверены PCM-заголовок/размер/длительность, потолок пика, конечный цифровой ноль, декодирование Edge, одинаковый SHA256 двух генераций. Художественное качество требует прослушивания пользователем.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓. Игра и SFX Lab продолжают использовать MP3.
+
+
+### [2026-09-04] — Rocket WAV v2 под NFS turbo-референс — реализовано, ждёт прослушивания
+
+- Генератор переписан: не «ракетные синусы», а стена как у `turbo-nfs-hot-pursuit-lvl-3.mp3` (саб + форм-банки шума + comb-турбо + growl 43 Гц + подъём резонансов).
+- Дыра перед взлётом ~180 мс (с 2.32 с), snap 2.45, boom 2.50; дальше плотный sustain, fall/посадка по игровым таймингам 12.80 с.
+- Итог: `sound/rocket-flight.wav`. MP3 в игре без изменений.
+
+### [2026-09-04] — Процедурный Rocket Flight WAV 12.80 с — реализовано, ждёт прослушивания
+
+- Автономный генератор `scripts/generate-rocket-flight-sfx.mjs` (Node ESM, без npm-пакетов): stereo 16-bit PCM 44.1 kHz, длительность 12.80 с строго по фазам ракеты.
+- Фазы: anticipation 0–2.50 (пульс 3→30 Гц, вакуум, турбина, choke 2.42, snap 2.45) → launch boom 2.50 → plateau 5.50–6.35 → cruise до 10.27 (голод топлива с 9.50) → fall 10.27–11.27 (g=18) → touchdown 11.27 и fade до 12.80.
+- Итог: `sound/rocket-flight.wav`. Игра по-прежнему играет `turbo-nfs-hot-pursuit-lvl-3.mp3`.
+- Пик ≤ 0.95; tanh на шине тяги/воздуха и на мастере.
+
+### [2026-09-04] — Ракета: музыка громче на фоне MP3 — реализовано, ждёт playtest
+
+- `audioSampleMusicGain` 0.24 → 0.34 → **0.48**; MP3 gain 3.0 без изменений.
+
+
+### [2026-09-04] — Ракета: muffle до fall, fade MP3 2.5 с — реализовано, ждёт playtest
+
+- Музыкальный muffle (LP-фильтр) держится на anticipation/launch/plateau/cruise; turbo shelf поверх; снимается только на fall.
+- `fadeOutMs` 1700 → 2500.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### [2026-09-04] — Ракета: gain 3, anticipation 2.5 с, плавный fade MP3 — реализовано, ждёт playtest
+
+- `rocketSample.gain` 2.35 → 3.0; `audioSampleMusicGain` 0.30 → 0.24.
+- `anticipationSeconds` 3.0 → 2.5.
+- `fadeOutMs` 900 → 1700; затухание через `setTargetAtTime` вместо линейного ramp.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### [2026-09-04] — Ракета громче, конь squat после прыжка — реализовано, ждёт playtest
+
+- `rocketSample.gain` 1.5 → 2.35; `audioSampleMusicGain` 0.38 → 0.30; плавный duck через `audioSampleMusicAttackSeconds` 0.55 / release 0.75.
+- `anticipationSeconds` 3.7 → 3.0.
+- Конь: после приземления с `horseJump` камера и FPS-голова слегка опускаются 0.4 с (`landingSquat*` в horse config).
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### [2026-09-04] — Ракета: доминирующий turbo MP3, anticipation 3.7 с — реализовано, ждёт прослушивания
+
+- `rocketSample.gain` 0.85 → 1.5; `audioSampleMusicGain` 0.72 → 0.38 — MP3 впереди, музыка на фоне.
+- `anticipationSeconds` 1.56 → 3.7 (подбор → ускорение).
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### [2026-09-04] — Ракета: чистый turbo MP3, duck музыки, подъём 3 с — реализовано, ждёт прослушивания
+
+- RocketSample подключён к `rocketSampleBus` → master, минуя SFX highpass/compressor и bus gain; `rocketSample.gain` 0.85.
+- Музыка приглушается на всём полёте (включая fall/fade) до 72% через `rocket.audioSampleMusicGain`; muffle/turbo на музыке без изменений.
+- `launchSeconds` 2.21 → 3; `cameraFovBoost` 18 → 22; `launchCameraFovDip` 9 → 11.
+- Исправлен stack overflow в `rocketDistanceAtTime` на границе фазы launch (рекурсия заменена на прямой расчёт).
+- Ключевые файлы: `AudioGraph.ts`, `SfxEngine.ts`, `AudioSession.ts`, `game.default.json`, `sfx.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### 2026-09-04 — Громкость turbo MP3 и ducking музыки — реализовано
+
+- RocketSample gain повышен с 1.33 до 2.66 (в 2 раза); предел Zod расширен до 4, JSON и fallback синхронизированы.
+- Во время rocket anticipation/launch/plateau/cruise/fall музыка плавно приглушается до 88% через существующий musicMasterGain; множитель урона сохраняется, после возврата к car восстанавливается.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓.
+
+
+### 2026-09-03 — Turbo MP3 при подборе ракеты — реализовано
+
+- По запросу пользователя подключён sound/turbo-nfs-hot-pursuit-lvl-3.mp3: anticipation запускает файл, fall гасит его за 900 мс. rocketSample: gain 2.66, attack 25 мс; JSON/Zod/fallback.
+- RocketSample предварительно загружает и декодирует MP3, хранит один источник; пауза/restart гасят его, возврат из паузы использует позицию от подбора. Запоздалая загрузка после отмены не запускает звук. Отдельный asset Vite, музыкальная цепочка без изменений.
+- Отключены ракетные prepare/launch/end, синтезированная тяга и ветер в rocket; три старые кнопки скрыты в лаборатории. Общие подборы/контакты сохранены.
+- Проверки: typecheck ✓, lint ✓, unit 542/542 ✓, Chromium test:sfx:audio с реальным MP3/fade/паузой/очисткой ✓, build ✓ (прежнее предупреждение о чанке). Контракт и ultimate-план обновлены. Уровень ждёт пользовательского прослушивания.
+
+
+### 2026-09-03 — Переработка шести SFX-семейств и A/B — реализовано, ждёт прослушивания
+
+- По отрицательному прослушиванию заменена общая структура синтеза для hit/canister/smash/coin/hoof; отдельный SfxPalette с материалами, удерживаемым воздухом, фрагментами, FM и двойным контактом копыта. SfxMotor: выхлоп/впуск/механика, нагрузка отдельно от оборотов, тихий мотор на минимальной скорости.
+- Сохранены маршрутизация, бюджеты/приоритеты, группировка, пауза/restart и музыкальная цепочка. Gameplay/LevelGen/Director/product shell не менялись. Остальные 15 разовых патчей и 3 фоновых слоя пока прежние.
+- configs/sfx.default.json + Zod + независимый fallback: новый palette; gain hit .64, canister .35, smash .5, coin .32, hoof .52; car motorGain .24, base/maxHz 55/145, filter 1600. Глобальный master .48 сохранён. BedTarget.load передаёт нагрузку в синтез.
+- Лаборатория: шесть A/B-сцен, примерное выравнивание взвешенного активного RMS с общей границей пика, исходные уровни, плавное переключение и экспорт. Прежняя реализация заморожена только в src/dev; в production новой палитрой пользуется игра.
+- Новый scripts/check-sfx-palette.mjs: реальный Chromium/OfflineAudioContext, A/B уровни и экспорт, мобильная ширина, 22/48 кГц, материалы/крайние настройки. Артефакты: logs/sfx/palette/; описания и следующий этап: docs/sfx-design.md и music-plan-ultimate.txt §14.
+- Проверки: typecheck ✓, lint ✓, unit 541/541 ✓, test:sfx:audio ✓, test:sfx:palette ✓, build ✓ (прежнее предупреждение крупного чанка). Параллельный первый unit-запуск дал timeout существующего LevelGen-теста; повтор отдельно прошёл, тест не менялся. 24-секундный SFX-рендер peak .2302, RMS .01386, clipping/non-finite 0; после очистки 13 статических узлов. Прослушивание не заменено этими метриками.
+
+### [2026-09-03] — Ultimate procedural SFX — реализовано, ждёт прослушивания
+
+- Создан итоговый план `docs/music-plan-ultimate.txt` на основе трёх предложений; реализована система целиком, включая полировку, а не только инфраструктурная фаза.
+- Чистые `core/sfx/SfxEventQueue` и `SfxDirector`: события по фактическому результату, группировка, cooldown, приоритеты, ограниченные серии, независимые вариации. События не расходуются getSnapshot; быстрые activate/interrupt нитро не теряются.
+- `audio/sfx/SfxEngine`: 20 патчей из модальных частичных и цветного шума, раздельные огибающие, тембр/длительность от тяжести, различие земли/металла, тихие фоны motor/wind/thrust/slide. Копыта/прыжок/посадка/подкат коня, все фазы ракеты, lane/near-miss/combo/mode/gameOver.
+- Пять SFX-шин, собственная защита и внутренний duck; музыкальная цепочка AudioGraph не изменена. AudioSession управляет паузой, restart, replay, скрытой вкладкой, завершением и освобождением источников. Геймплей/LevelGen/Director/fairness/экраны не менялись; unit проверяет одинаковые результаты seeded-симуляции при разном потреблении SFX.
+- `configs/sfx.default.json` + Zod/fallback/ConfigStore/HMR: masterGain 0.48; 12 разовых голосов, 4 завершаемых, общий pickup limit 2; монеты 90 мс, баллоны 110 мс. Значения требуют прослушивания с разными треками.
+- Отдельная dev-лаборатория `sfx-lab.html`: прослушивание патчей поверх сценария, все режимы, локальная музыка, независимая громкость, диагностика и экспорт WAV. `npm run test:sfx:audio` запускает реальный Chromium/OfflineAudioContext и проверяет аудио, нагрузку и загрузку/паузу/возврат в игре.
+- Артефакты: `logs/sfx/runner-sfx-demo.wav` (24 с), `audio-report.json`, `laboratory.png`. В демо peak ≈0.135, non-finite/clipped=0, хвост затухает в ноль. Стресс: 12 голосов + 4 завершаемых, пиково 222 узла; после остановки остаются только 13 статических узлов шин.
+- Уточнена проверка повторяемости: команды детерминированы; для DSP сравниваются peak/RMS с допуском, побитовая идентичность PCM не предполагается.
+- Проверки: typecheck ✓, lint ✓, unit **540/540** ✓, test:sfx:audio ✓, build ✓. Vite предупреждает о чанке >500 kB; бандл ≈1.09 MB / gzip 279 kB. Производительность на целевом пользовательском ноутбуке и субъективный баланс с его музыкой не объявляются принятыми.
+- Обновлены status.md, docs/architecture.md и docs/sfx-design.md.
+
+
+### [2026-09-03] — Procedural SFX: план GPT по ответам пользователя — документация
+
+- Создан `docs/music-gpt.txt`: согласованный scope, палитра, события и архитектура, группировка, лимиты, конфиг, жизненный цикл, этапы и критерии приёмки.
+- Конь включён в MVP; мелкие зелёные — баллоны нитро с пневматическим звуком; серии подборов объединяются, весь микс подчинён музыке. Числа в плане — предложения для будущего прослушивания.
+- По явному уточнению пользователя текущая итерация ограничена текстовым планом: код, конфиги и `docs/sfx-design.md` не создавались. Ранее созданный `docs/music-grok.txt` сохранён.
+- Обновлён HANDOFF. Проверки typecheck/lint/test не запускались: программный код не менялся.
+
+### [2026-09-03] — Procedural SFX: контракт согласован — код не начат
+
+- Ответы Q1–Q8: тёмный нейтральный; SFX тише музыки; монеты ladder+лимитер; двигатель с порога скорости; **полный набор коня в MVP**; музыку на hit не глушить; громкость только конфиг; slow-mo не тянет высоту SFX.
+- Контракт: `docs/sfx-design.md`. Обоснование обновлено: `docs/music-grok.txt`.
+- Код / schema / AudioGraph не менялись.
+
+### [2026-09-03] — Procedural SFX: анализ и ТЗ — обсуждение, код не начат
+
+- Разобран текущий аудиограф (`sfxBus` пустой, music EQ нитро/ракеты/урона уже есть) и события GameSim (`coinPickups`, `nearMissFx`, `greenSmashFx` смешивает монеты/micro/smash).
+- Предложение: `SfxDirector` (core) → `SfxEngine` (audio) → существующий `sfxBus`; конфиг `sfx.default.json`.
+- Детальное ТЗ: `docs/music-grok.txt`. Код и `sfx-design.md` — после ответов Q1–Q8.
+- Проверки: не гонялись (нет правок кода).
+
+### [2026-09-03] — Старт A+B, green FOV high-speed, low→red fix — реализовано, ждёт playtest
+
+- Старт: `rampPerSecond` 0.26, `base` 10; early green smash 14 с / scale 2.3.
+- Green FOV: как раньше на низкой скорости; бонус FOV только при `speedNorm` > ~0.52 (`greenSmashFovBoost` 0.26).
+- Low/medium красный: `destructibleBaseColor` + `ObstacleModels.tint` (раньше цвет сбрасывался каждый кадр).
+- Проверки: typecheck ✓, lint ✓, unit **514/514** ✓.
+
+### [2026-09-03] — Feel: expert gate, green FOV, low→red test, rocket cam, horse sphere fix — реализовано, ждёт playtest
+
+- Expert: gate 15 с без урона, ramp 20 с до +30%.
+- Green smash: FOV/pullback сильнее на скорости (`greenSmashFovBoost`, speed-scaled pulse).
+- Car medium (low) визуал временно красный (тест).
+- Rocket camera Y: `cameraYOffset` 1.01→0.82.
+- Баг: пропущенная horse-сфера на трамплине удаляется при посадке (как air-coins).
+- Проверки: typecheck ✓, lint ✓, unit **514/514** ✓.
+
+### [2026-09-03] — Expert Skill Momentum (+30% cap) — реализовано, ждёт playtest
+
+- Veteran-only: 20 с без урона HP + EMA скорости ≥ 80% achievable cap (нитро/horse/rocket учтены честно).
+- `skillMomentum` 0→1 за ~35 с; урон → decay к 0 за ~15 с. Cap: car/horse `speeds.max`, rocket `rocket.maxSpeed`.
+- Визуал: `postfx.shakeSkillMomentumBoost` (без HUD). ТЗ: `docs/expert-speed-design.md`.
+- Проверки: typecheck ✓, lint ✓, unit **514/514** ✓.
+
+### [2026-09-03] — Car hazard spacing (красный/жёлтый пары) — реализовано, ждёт playtest
+
+- Между low/tall и tall/tall на одной полосе — больший min center gap (×1.35 mixed, ×1.65 tall-tall); low-low без изменений (×1.0).
+- Компакция tall-цепочек отключена (`compactTallChains: false`).
+- Tunables: `levelgen.carHazardSpacing`; ключевые файлы: `carHazardSpacing.ts`, `LevelGenerator.ts`, `obstacleCompaction.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **509/509** ✓.
+
+### [2026-09-03] — Hotfix: dodge-cam, mode-switch, tutorial audio, pause coins, rocket — реализовано, ждёт playtest
+
+- `dodgePresentationEnabled: false` — камера после уворота временно выкл.
+- Конь→машина: `carBonusMinSeconds` 12→10, guaranteed 20→17; фикс — портал на слайде позади игрока больше не блокирует бонусы.
+- Tutorial slow-mo: старт 0.82с, scale 0.48, audio rate floor 0.68, detune −70.
+- Пауза: монетки не крутятся.
+- Ракета: крен камеры +25%, быстрее снятие muffle после подбора (attack 0.45с, release 0.06с).
+- Проверки: unit **505/505** ✓.
+
+### [2026-09-03] — Dodge-cam: дольше, только lane-escape на высокой скорости — реализовано, ждёт playtest
+
+- Камера уворота больше не срабатывает от проезда рядом: нужен уход с полосы этого препятствия, пока оно было впереди.
+- Только при скорости ≥ `dodgeMinSpeed` (16 м/с).
+- Длительность: вход 0.16 с + полка 0.10 с + возврат 0.42 с (было 0.12+0.28).
+- Tunables: `dodgeMinSpeed`, `dodgeHoldSeconds`; Zod/fallback синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **505/505** ✓.
+
+### [2026-09-03] — Camera presentation (желе-серии + dodge-cam) — реализовано, ждёт playtest
+
+- Серия поворотов в одну сторону (окно 0.35 с) копит `turnMomentum` и усиливает желе X, крен и лёгкий откат Z; спад ~0.8 с. Обратный поворот сбрасывает накопление.
+- Удачный уворот: dip + pullback + смещение камеры **от** угрозы. Триггеры — near-miss как раньше и tall/red/nitroMandatory на соседней полосе без урона; один импульс на объект, без усиления при двойном триггере.
+- Конь chase ×0.45, FPS ×0.25, Z-откат FPS ×0.1 от машины. Нитро/green smash/ракета не переписываются — только clamp presentation-оффсетов.
+- Tunables в `camera` (`game.default.json` + Zod + fallback), включая `presentationClampX/Y/Z`.
+- Ключевые файлы: `src/core/camera/cameraPresentation.ts`, `GameSim.ts` (`dodgeFx`), `GameScene.ts`, `tests/unit/cameraPresentation.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **503/503** ✓.
+
+### [2026-09-03] — Camera presentation — ТЗ утверждено
+
+- Документ: `docs/camera-presentation-design.md` (turn momentum 0.35с/0.8с, dodge-cam от угрозы, конь ~45%/FPS ~25%).
+- Реализация — отдельная итерация.
+
+### [2026-09-03] — Feel-пак: пульс, крен, хитбоксы, монеты, ракета→трамплин — реализовано, ждёт playtest
+
+- Green-пульс (откат камеры + звук) на сбор монет и разбитие средних зелёных; раньше был только на мелких.
+- Крен камеры машины: `carTurnBankScale` **1.15 → 1.38**.
+- Красные стены: хитбокс по полной длине меша (без rear-trim); `nitroMandatory` тоже.
+- Конь: на одной позиции рисуется одна монетка (дедуп в рендере).
+- После посадки с ракеты: **5 с** до появления трамплина (`rocket.postLandingRampCooldownSeconds`).
+- Проверки: typecheck ✓, lint ✓, unit **493/493** ✓.
+
+### [2026-09-02] — Tutorial, стартовый трафик и инерция поворотов — реализовано
+
+- Tutorial-стрелки используют depthTest/depthWrite: препятствия перекрывают стрелку обычным образом. Добавлено спокойное движение ±0.22 м вдоль действия (nitro по Z, jump вверх, slide вниз), период ~1.57 с; pulse/цвета сохранены.
+- Автоматическая активация нитро при столкновении сразу увеличивает runStats.nitroActivations один раз; переход horse→car с готовым нитро тоже учитывается. Этап tutorial завершается с первого срабатывания.
+- Старт: пустая категория больше не обходит earlyTraffic, обязательные ранние строки действуют также в Destroy-секциях с предметами. Явный конфиг без контента остаётся пустым. fillOpeningContent заполняет разрывы безопасными предметами только в новом стартовом горизонте; учитываются реально публикуемые монеты и доступные рампы. maxOpeningEmptyGapZ=16.
+- Найдена причина пустых коридоров: ранние ramp-gates резервировали пространство, затем GameSim удалял их из-за startDelaySeconds=10. Доступность новых рамп теперь проверяется до итоговой сертификации/наполнения, а не только после публикации.
+- Проходимость: горизонт проверяется от позиции игрока, с учётом близких опубликованных объектов и диапазона от текущей скорости до referenceSpeed (fairness.speedSampleStep=2). Repair меняет только новые IDs. Быстрый shoulderPasser больше не считается свободной полосой в temporal-проверке; carTrafficScrollSpeed общий для неё и симуляции, включая minimum 0.5.
+- LevelGenerator.reset очищает timing/traffic/cooldown-контекст. AudioSession.prepareRestart перематывает трек и сбрасывает анализатор до стартовой генерации и отсчёта. Рестарт с конца трека больше не подавляет первые чанки старым trackTime.
+- По согласованию: толчок от micro ×2 до 10 с, затем линейное снижение до обычного к 20 с. Tunables destroy.earlyGreenSmashSpeedScale=2, earlyGreenSmashFullSeconds=10, earlyGreenSmashFadeSeconds=10. Заряд нитро, speed cap и бонус за medium не менялись.
+- Повороты presentation-only: camera.horseTurnBankScale=1.25 на земле/в воздухе, carTurnBankScale=1.15 по просьбе умерить крен. Кузов машины получает пружинную инерцию и небольшой возвратный переброс (carTurnSpring=150, carTurnDamping=17, carTurnBodyYaw=0.28, carTurnBodyRoll=0.14). Время/скорость перестроения и коллизии сохранены.
+- Все новые настройки синхронизированы в JSON/Zod/fallback. Ключевые файлы: TutorialArrows, GameScene, GameSim, LevelGenerator, passability, trafficMotion, AudioSession/VideoFileAudioSource, bootstrap.
+- Проверки: typecheck ✓, lint ✓, unit **492/492** (60 файлов) ✓. Старт: 64 seed × 3 сложности, видимое наполнение и маршруты на 5 скоростях; reset, границы усиления 0/10/15/20/30 с, быстрый боковой трафик, одно срабатывание tutorial. Вероятностный late-nitro баланс проверяется на 17 распределённых seed, включая исторический.
+- Chromium ✓: учёт глубины/движение стрелки, automatic nitro=1 без повторной подсказки, неизменность PlayerState при render, кузов с небольшим rebound и возвратом к нулю, restart trackTime=0 без старых/дублирующихся объектов, воспроизведение после countdown, без pageerror. Читаемость и feel ждут пользовательского playtest.
+
+### [2026-09-02] — Tutorial: стрелка вдоль дороги, ramp-flight off, ближний horse jump — реализовано
+
+- По уточнению пользователя nitro-стрелка снова направлена от камеры вперёд в medium-машину, без бокового смещения. Лежит на высоте ~0.35 м перед целью; удлинена вдоль дороги, голова сплюснута для плоского профиля над покрытием.
+- Все tutorial-стрелки утолщены: stem width 0.2 → 0.34, head radius 0.36 → 0.52; цвета и пульс сохранены.
+- `isTutorialRampFlight` отключает tutorial при `airSource=ramp` и `airState=airborne/landing`. Bootstrap снимает scale перед следующим fixedUpdate, AudioSession получает 1, HUD также скрывает старую nitro-подсказку. Этапы сохраняются; после приземления выбирается новая подходящая цель. Обычный horseJump не отключает обучение.
+- По уточнению «более близкие для прыжка объекты» добавлены отдельные `tutorial.horseJumpArrowMinTimeToObstacle=1.3` и `horseJumpArrowMaxTimeToObstacle=3` (JSON/Zod/fallback). Для jump окно уменьшено с 2–5 до 1.3–3 с; slide продолжает использовать прежние horseArrow-параметры.
+- Проверки: typecheck ✓, lint ✓, unit **476/476** ✓. Тесты покрывают car/horse ramp flight+landing и возврат на землю, сохранение normal horseJump, направление/высоту/длину стрелки, выбор близкой jump-цели и валидацию окна.
+- Chromium smoke: стрелка forward=1/sideways=0 по центру полосы, при трамплине simulation scale=1 и audio scale=1, HUD/стрелка скрыты, после посадки обучение продолжается, jump выбирается на 18 м вместо 45 м при 10 м/с. Скриншот проверен: `.tmp/tutorial/nitro-forward.jpg`.
+- Вручную: «новичок» → полное нитро → проверить лежащую стрелку перед medium; заехать на трамплин; в horse оценить подсказки на ближних jump-объектах. Новые feel-настройки ждут playtest.
+
+### [2026-09-02] — Tutorial: nitro readiness/окраска и быстрый выход — исправлено, ждёт playtest
+
+- Восстановлен прежний визуальный порог зелёных medium-машин: 98.5% заряда. Строгая готовность tutorial остаётся на 100%, как реальная активация нитро.
+- `PlayerSim.nitroReady` — общий актуальный предикат активации; `GameSnapshot.nitroReady` больше не читает кэш генератора, вычисленный до начисления заряда текущего fixedUpdate. Это устраняет задержку окраски/tutorial при наполнении в конце кадра; horse/rocket не объявляют готовность.
+- Nitro-стрелка развёрнута поперёк дороги и смещена сбоку к medium-цели; порядок вращений YXZ сохраняет горизонтальное направление, вместо вида вдоль оси камеры.
+- По согласованию с пользователем `tutorial.slowMoPassTimeoutSeconds`: 2.5 → **0.5 с** (JSON + fallback + design); выход остаётся **0.25 с**. На пересечении таймаута blend получает только оставшуюся часть dt, чтобы выдержать обе длительности.
+- Проверки: typecheck ✓, lint ✓, unit **470/470** ✓. Новые регрессионные тесты проверяют начисление в том же кадре в Classic/Destroy/Adrenaline, отключение готовности при смене режима/активации/reset и ориентацию стрелки; обновлены тесты точного timeout+blend.
+- Chromium: medium tint `#44bb77` при 98.5% и 100%; при 100% ready=true и стрелка без дополнительного simulation tick. Скриншот проверен: `.tmp/tutorial/nitro-fixed.jpg`.
+- Вручную: обновить страницу → «новичок» → накопить нитро; проверить зелёные medium и стрелку до первой активации, затем проехать мимо цели и оценить выход за 0.5+0.25 с.
+
+### [2026-09-02] — Tutorial novice/veteran — реализовано, ждёт playtest
+
+- Добавлены `app/TutorialStorage.ts` (ключ `mdr-tutorial-status`, только novice/veteran, защита от недоступного storage) и чистый `core/tutorial/TutorialController.ts`.
+- Nitro обучает на ближайшем `low` при симуляционном `GameSnapshot.nitroReady`; micro/сломанные/ghost/неинтерактивные препятствия исключены. Horse выбирает ближайший незавершённый jump/slide по `horseAction` на текущей полосе.
+- Цель сохраняется ниже окна первоначального выбора; время контакта учитывает footprint. Успех определяется счётчиками рана независимо от активной стрелки. Новый ран сбрасывает этапы; кнопка «новичок» слева снизу запоминает текущие счётчики как baseline, чтобы не засчитывать старые действия. Все три успеха в одном ране сохраняют veteran.
+- `render/TutorialArrows.ts`: зелёная горизонтальная nitro-стрелка, бирюзовые вверх/вниз, градиент и пульс, одна активная цель. `GameScene` подключает/сбрасывает/освобождает меши; HUD скрывает старую nitro-подсказку при tutorial-стрелке.
+- `bootstrap` масштабирует fixedUpdate и scene/VFX dt; blend и timeout идут по реальному времени, FPS не искажается. Выход по успеху, столкновению, потере цели/readiness, таймауту после проезда; rocket/gameOver/reset снимают scale сразу. Пауза сохраняет цель; replay не обучает.
+- `AudioSession.setTutorialPlaybackScale` задаёт media playbackRate с floor/power и независимый highshelf EQ с detune; высота тона сохраняется средствами media element. Вход анализатора остаётся до EQ, громкость пользователя не меняется. Перезапуск/выход восстанавливает rate=1.
+- Конфиг `tutorial.*` синхронизирован в JSON/Zod/fallback: nitro 25–40 м, horse 2–5 с, slow-mo с 1.1 с, timeout 2.5 с после проезда, scale 0.35, blend 0.25 с, audio floor 0.55, power 1, detune −120 cents. Hot-reload tutorial подключён.
+- Проверки: typecheck ✓, lint ✓, unit **465/465** ✓ (55 новых: controller 41, storage 6, audio 4, arrows 4); build ✓ (предупреждение Vite о chunk >500 kB).
+- Изолированный Chromium smoke: стрелки/HUD, scale симуляции и рендера 0.35, фактический playbackRate 0.55 и EQ detune −120, success/veteran/reset, rocket-return и pause/resume; ошибок JS нет. Скриншот: `.tmp/tutorial/horse.png`.
+- Ручная приёмка: `npm run dev` → «новичок» → активировать nitro и успешно выполнить jump/slide; проверить читаемость стрелок, звук, промах/столкновение, паузу, rocket-return и сохранение veteran после перезагрузки. Feel/звук ещё не приняты пользователем.
+
+### [2026-09-02] — Tutorial system — ТЗ утверждено
+
+- Документ: `docs/tutorial-design.md` (novice/veteran, 3 этапа, 3D-стрелки, full slow-mo, конфиг tunables).
+- Реализация — отдельная итерация (сильный чат).
+
+### [2026-09-02] — Destroy green micro path readability — реализовано, ждёт playtest
+
+- Green `micro` не ставится вплотную к blocking red/tall/low: lead-gap `fairness.microLeadMinGapZScale` **1.75** (~7 м).
+- Кластеры, которые вели в тупик или в полосу red wall без escape, переносятся на comfort-route; traffic перед игроком не вырезается. Опубликованные micro по-прежнему защищают свою полосу на staging.
+- Red wall: micro в той же полосе только на полосе рампы или соседней; в коридоре прыжка greens нет.
+- Чуть больше green на пути: `routeGuideShare` **0.65→0.72**, `microClusterProbability` **0.42→0.48**, `microRowChance` **0.28→0.34**.
+- Ключевые файлы: `LevelGenerator.ts`, `passability.ts`, `levelgen.default.json`, `game.default.json`, `carFairness.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **410/410** ✓.
+
+
+### [2026-09-02] — Car→horse env transition (масса зданий + horse decor) — реализовано, ждёт playtest
+
+- City skyline: фаза погружения **0.7→0.9** blend, easing `pow(t, 1.42)` + smootherstep — здания дольше «тяжелеют» вниз.
+- Horse side decor: старт с **0.54** blend (overlap с city), вместо ожидания полного погружения на **0.7**.
+- `horse.environmentTransitionSeconds` **2 → 2.75** (общая длительность перехода).
+- Ключевые файлы: `environmentGroundTransition.ts`, `game.default.json`, `fallbacks.ts`, unit-тест.
+- Проверки: typecheck ✓, lint ✓, unit transition 4/4 ✓.
+
+### [2026-09-02] — Feel-tune batch 2 (камера + FX + turbo) — реализовано, ждёт playtest
+
+- Машина: `camera.positionY` **3.72**; speed FOV/pullback +25% (`CAR_SPEED_FOV_NORM`, `CAR_SPEED_PULLBACK_Z`).
+- FPS-конь: скрыто world-тело; только head+neck; turbo-shake на bust; ramp-fall camera (`rampFallCamera*`).
+- Green micro smash: speed bonus **0.058**; стекируемый `greenSmashFx` (FOV, blur, cam pullback, audio whoosh).
+- Turbo: fast-path на острых пиках **первые 35 с** трека (`getTrackTime`); beat-wait **0.15 с**; entry **0.15 с**.
+- Дорога: ground **72** м; боковой `roadEdgeVeil` под цвет fog на всех режимах.
+- Ключевые файлы: `GameScene.ts`, `GameSim.ts`, `HorseFirstPersonView.ts`, `AudioSession.ts`, `game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **406/406** ✓.
+
+### [2026-09-02] — Feel-tune batch 1 (простые) — реализовано, ждёт playtest
+
+- HUD: полоска длительности трека сдвинута на `top: 52px`, не перекрывается панелью AudioControls.
+- Камера машины: `camera.positionZ` **12.5 → 9.375** (−25%).
+- Horse FPS bust: голова/шея/холка ближе к камере и ниже; на подкате ещё ближе.
+- Train roof red: отдельный `trainRoofTallMaterial` без pulse/horse-car tint; сзади маркер ←→ (dodge hint).
+- Ключевые файлы: `src/ui/HUD.ts`, `configs/game.default.json`, `src/render/HorseFirstPersonView.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **406/406** ✓.
+
+### [2026-09-01] — Staged car↔horse ground transition — реализовано, ждёт visual playtest
+
+- Opacity-crossfade окружения заменён двухфазной анимацией в рамках прежней длительности: исходный режим полностью уходит под землю, затем новый выходит из земли.
+- City layer получил отдельную ~1.4-секундную smootherstep-фазу вместо ~1 с: медленнее разгоняется и останавливается, а horse-декор ждёт полного скрытия зданий.
+- Переход симметричен: car→horse и horse→car; тестом закреплено отсутствие coexistence двух наборов над землёй.
+- Единый контракт применён к car/horse side decor, крупному city scenery и collision-free Frontier Town.
+- Skyline сохраняет непрозрачные материалы во время движения; городской root уходит на 22 м вниз, чтобы скрывались даже верхушки зданий.
+- Rocket overlay и сохранение окружения режима взлёта не менялись; gameplay, core, LevelGenerator и hitboxes не затронуты.
+- Ключевые файлы: `src/render/environmentGroundTransition.ts`, `src/render/CityScenery.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **406/406** ✓, build ✓.
+
+### [2026-09-01] — Connected horse FPS bust — реализовано, ждёт visual playtest
+
+- Отдельная camera-local голова заменена цельным FPS-rig: сохранён прежний схематичный head, добавлены шея, грива и широкая холка, визуально продолжающаяся за нижнюю границу кадра.
+- Gait, turn и slide применяются ко всему погрудному узлу; у головы остался только слабый относительный кивок, поэтому она больше не должна ощущаться отсоединённой от тела.
+- Мировая модель, камера, gameplay-размеры и hitbox не менялись.
+- Новый render-модуль: `src/render/HorseFirstPersonView.ts`; добавлены unit-тесты структуры и связного движения rig.
+- Проверки: typecheck ✓, lint ✓, unit **403/403** ✓, build ✓.
+
+### [2026-09-01] — Opaque city + horse FPS head hotfix — реализовано, ждёт visual playtest
+
+- Структурные материалы city scenery теперь полностью непрозрачны и пишут depth при завершённом car-blend; сквозь здания больше не должны просвечивать край карты и дальние объекты.
+- Плавный car↔horse transition сохранён: во время blend материалы временно переходят в transparent-режим, после завершения снова становятся opaque.
+- Причина пропажи головы коня найдена: мировая голова намеренно скрывалась в first-person без замещающего представления.
+- Добавлен отдельный camera-local FPS head rig с головой и ушами: расположен у нижней границы кадра, имеет очень лёгкий gait/turn/slide motion и не меняет мировую модель, камеру или hitbox.
+- Добавлен unit-контракт на opacity/depthWrite building shells и сохранение fade.
+- Проверки: typecheck ✓, lint ✓, unit **400/400** ✓, build ✓. Browser render-QA повторно заблокирован сбоем локального browser runtime.
+
+### [2026-09-01] — Neon city + orbital scenery — реализовано, ждёт visual playtest
+
+- Машина: добавлен современный неоновый skyline из 12 разреженных зданий четырёх силуэтов с приглушёнными окнами и вывесками; детализация намеренно не конкурирует с gameplay lane.
+- Городские landmarks: стадион, многоуровневый паркинг, эстакада с движущимся поездом и два надземных пешеходных перехода с безопасным визуальным клиренсом.
+- Небо города: редкие узнаваемые вертолёт (наклон корпуса, main/tail rotors) и самолёт с детерминированными циклами пролёта.
+- Ракета: отдельный orbital overlay со звёздами, кратерной луной, краем планеты, двумя вращающимися спутниками, станцией с вращающимся кольцом и кометой с полупрозрачным хвостом.
+- Дорога, obstacles и car/horse environment под ракетой не удаляются: orbital слой плавно накладывается только по `rocketEnvironmentBlend` и так же исчезает перед возвратом.
+- Все новые объекты render-only, collision-free, переиспользуются без runtime spawn/despawn и замерзают на pause/game over; `core/`, `LevelGenerator` и hitboxes не менялись.
+- Ключевые файлы: `src/render/CityScenery.ts`, `src/render/OrbitalScenery.ts`, `src/render/GameScene.ts`, `tests/unit/cityScenery.test.ts`, `tests/unit/orbitalScenery.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **399/399** ✓, build ✓. Автоматический browser render-QA заблокирован сбоем локального browser runtime.
+
+### [2026-09-01] — Feel/readability pass (камеры, конь, монеты, canister) — реализовано
+
+- Конь голубой (overdrive/blaster): тряска модели ×0.08 (`FIRST_PERSON_HORSE_BLUE_GAIT_SHAKE_MUL`).
+- Nitro-canister micro: визуал ×1.3, вращение +50%; hitbox без изменений.
+- Car chase cam ближе (`positionZ` −4.9); rocket cam −25% по Y/Z (`cameraYOffset` 1.01, `cameraZOffset` 3.15).
+- Horse dodge tall: визуал +25% (`HORSE_DODGE_TALL_VISUAL_HEIGHT_MUL`).
+- Horse ground coins: weave/rest zigzag, `coinMaxSameLaneStreak: 3`, diversify + skip при тупике; без глобального выравнивания всех монет по прямой.
+- Car difficulty раньше: `longRunDifficulty.delaySeconds` 22→17.
+- `APP_BUILD_SEQ` → 4.
+- Проверки: typecheck ✓, lint ✓, unit **393/393** ✓.
+
+### [2026-09-01] — UX/readability pass (опрос, ракета, фары, horse) — реализовано
+
+- Опрос конца забега: крестик и Escape закрывают без сохранения лога; после song_end показываются результаты.
+- Ракета: `postFirstHorseDelaySeconds: 10` — бонус не раньше 10 с после первого превращения в коня.
+- Монеты ракеты: старт с плато (`anticipation + launch`), дистанция учитывает anticipation; первая монета ≤1 с после плато.
+- Tall red (car): круглые передние + прямоугольные задние красные фары, не зависят от нитро.
+- Horse slide: `slideWood` (желтее коричневых частей); dodge red: больше `tint` на корпусе (stagecoach, bison, cargo, mine cart, barricade).
+- `APP_BUILD_SEQ` → 3.
+- Ключевые файлы: `EndRunPanel.ts`, `bootstrap.ts`, `GameSim.ts`, `rocket.ts`, `ObstacleModels.ts`, `GameScene.ts`, `game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **393/393** ✓.
+
+### [2026-09-01] — Playtest export reset + buildSeq + camera tune — реализовано
+
+- Экспорт логов: `clearPlaytestSessions()` после скачивания; файл `playtest-export-b{N}-…json`.
+- Каждая сессия: `context.buildSeq` из `src/app/buildInfo.ts` (`APP_BUILD_SEQ` — bump при релизе).
+- Конь: overdrive тряска ×0.16; FPS cam +0.1 Y; horse chase base cam выше.
+- Машина: chase cam ближе (`positionZ` −4.35).
+- Проверки: typecheck ✓, lint ✓, unit **391/391** ✓.
+
+### [2026-09-01] — Micro nitro canister model — реализовано, ждёт playtest
+
+- Все car micro → единая модель `nitro-canister`: толстый зелёный баллон, плоское дно, купол, прыскалка; ~85% hitbox.
+- Вращение: Y ~½ скорости монет + лёгкий наклон; hitbox без изменений.
+- Ключевые файлы: `ObstacleModels.ts`, `obstacleVisualVariants.ts`, `GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **390/390** ✓.
+
+### [2026-09-01] — Medium car front/rear lights — реализовано, ждёт playtest
+
+- Средние машины: круглые передние фары (жёлтые / off при нитро); прямоугольные задние (красные / off).
+- Ключевые файлы: `ObstacleModels.ts`, `GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **389/389** ✓.
+
+### [2026-09-01] — Horse overdrive: меньше тряски, камера выше — реализовано, ждёт playtest
+
+- Тряска gait при overdrive: ×0.28 (было ×0.5), gait rate boost 0.55 (было 1.8).
+- Камера FPS при трате нитро: +0.1 Y (было −0.28).
+- Tunables: `visualLab.ts` — `OVERDRIVE_CAM_Y`, `GAIT_SHAKE_MUL`, `GAIT_RATE_BOOST`.
+- Проверки: typecheck ✓, lint ✓.
+
+### [2026-09-01] — Horse overdrive model dip + FOV — реализовано, ждёт playtest
+
+- На время траты horse overdrive: модель опускается и наклоняется вперёд синхронно с камерой (0.3 с); FOV +5° в FPS.
+- Общий `horseOverdriveBlend` для модели/FOV; dip камеры — только firstPerson.
+- Ключевые файлы: `src/app/visualLab.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **389/389** ✓.
+
+### [2026-09-01] — Medium headlights + horse overdrive camera/shake — реализовано, ждёт playtest
+
+- Фары легковых medium: только при жёлтом low и без заполненного/активного нитро игрока; иначе погашены.
+- Overdrive коня: тряска модели ×0.5; dip камеры/головы отключается на подкате и плавно возвращается после.
+- Ключевые файлы: `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **389/389** ✓.
+
+### [2026-09-01] — firstPerson polish + horse jump visuals — реализовано, ждёт playtest
+
+- Дефолт камеры: `firstPerson` вместо `low`.
+- Конь: искры монет ×0.65; тряска модели в FPS ×0.5; overdrive опускает камеру/голову за 0.3 с.
+- Выход horse FPS → car/rocket: blend 0.85 с (вход по-прежнему 0.4 с).
+- Jump-препятствия коня: только `crate-stack` (жёлтые ящики).
+- Ключевые файлы: `src/app/visualLab.ts`, `src/render/GameScene.ts`, `src/render/obstacleVisualVariants.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **389/389** ✓.
+
+### [2026-09-01] — firstPerson гибридная камера — реализовано, ждёт визуальный playtest
+
+- Пресет `firstPerson` / «от 1-го лица» сохранён; car и rocket используют chase-камеру пресета `low` (без FPS-руля и без FOV 78°).
+- Horse в firstPerson: FPS-риг с поднятой камерой (Y ~1.42 / look ~1.04), скрыт `horseHeadRig`, FOV плавно до `78°`.
+- Blend входа/выхода и car↔horse↔rocket: `0.4 с`; jump-lift low-пресета применяется к car/rocket в firstPerson.
+- Ключевые файлы: `src/render/GameScene.ts`, `src/app/visualLab.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **388/388** ✓.
+
+### [2026-08-31] — Visual Lab firstPerson camera — реализовано, ждёт визуальный playtest
+
+- В camera selector добавлен пресет `firstPerson` / «от 1-го лица»; дефолт сохранён `low`, остальные пресеты не менялись.
+- Вход/выход из FPS и переходы car↔horse↔rocket используют отдельный smooth blend `0.4 с`; FOV плавно расширяется минимум до `78°` только в firstPerson.
+- Car-камера размещена над капотом; camera-attached 3D-руль использует `playerTurnBlend`, находится внизу кадра и получает ярко-голубой emissive при активном нитро.
+- Horse-камера сидит у седла, следует `player.y`, синхронизирует arcade bob с `horseGaitPhase`, опускается при slide и скрывает `horseHeadRig`, оставляя шею/гриву.
+- Rocket-камера следует за носом чуть сверху; firstPerson напрямую следует `player.y`, поэтому сохраняется на крыше поезда и органично сопровождает прыжки/посадки.
+- Ключевые файлы: `src/app/visualLab.ts`, `src/render/GameScene.ts`, `tests/unit/visualLab.test.ts`.
+- Tunables-якоря: `FIRST_PERSON_CAMERA_FOV = 78`, `FIRST_PERSON_CAMERA_BLEND_SECONDS = 0.4`.
+- Проверки: typecheck ✓, lint ✓, unit **388/388** ✓, build ✓.
+
+### [2026-08-31] — Obstacle readability v1.2 + player nitro lights — реализовано, ждёт визуальный playtest
+
+- У medium traffic убраны задние светящиеся фары: state-tint остаётся только на двух передних лампах.
+- Horse cargo wagon и mine cart доведены почти до полной tall-высоты; их верхняя масса включена в красный gameplay-tint, чтобы не провоцировать попытку прыжка.
+- Crate stack увеличен до почти полного low-силуэта и получил жёлтые основные корпуса; тёмные рамы slide-препятствий заменены более светлым деревом/металлом, rock material также осветлён.
+- Micro props и quad/trike дополнительно увеличены в пределах полосы, зелёный материал стал ярче. Collision footprint и fairness не менялись.
+- Зелёные collision sparks стали на 34% прозрачнее, получили более широкий боковой разброс и отрицательный Z-импульс к камере.
+- Визуальный радиус обычной монеты уменьшен на 12% без изменения pickup radius и размеров бонусов.
+- У player sport car добавлены две передние фары с плавным emissive/point-light усилением только во время активного нитро.
+- Ключевые файлы: `src/render/ObstacleModels.ts`, `src/render/GameScene.ts`, `tests/unit/obstacleModels.test.ts`, `docs/architecture.md`.
+- Проверки: typecheck ✓, lint ✓, unit **386/386** ✓, build ✓. Browser render-QA заблокирован системным сбоем локальной browser runtime.
+
+### [2026-08-31] — Playtest survey + IndexedDB logs — реализовано, ждёт playtest
+
+- Автозапись playtest с начала забега; сохранение в IndexedDB только после полного опроса (все пункты обязательны).
+- Опрос после death и song_end: звёзды с подписями слева/справа + choice; конфиг `configs/playtest-survey.json`.
+- Session v2: `context` (ruleset, preset, FPS, build) + `survey`; экспорт `⬇ logs (N)` → `playtest-export-*.json`.
+- Ключевые файлы: `src/ui/EndRunPanel.ts`, `src/ui/PlaytestSurveyForm.ts`, `src/app/playtest/playtestStore.ts`, `src/app/bootstrap.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **385/385** ✓.
+
+### [2026-08-31] — Obstacle readability v1.1 — реализовано, ждёт визуальный playtest
+
+- Micro car props получили индивидуальный визуальный масштаб: дорожное заграждение шириной с medium car, более читаемые бочки/конусы/шины; collision footprint и проходимость не менялись.
+- На полосах 1/2 теперь спавнятся только quad-bike и cargo-trike с более реалистичными пропорциями; колёса продолжают вращаться.
+- У всех medium passenger cars добавлены передние и задние emissive-фары: жёлтые в обычном состоянии, более яркие зелёные при nitro/ready.
+- Green-medium knockback теперь показывает саму отлетающую модель вместе со вспышкой; лимит осколков повышен с 5 до 7. Физика дуги/бокового импульса сохранена.
+- Horse jump получил заметные жёлтые gameplay-плашки; slide — более крупные оранжевые перекладины; dodge — больше красной площади. Ошибочно растянутый поперёк дороги тент cargo wagon заменён ограниченным одно-полосным силуэтом.
+- Car-модели на встречной стороне разворачиваются по направлению положительного `laneFlow`; в текущей конфигурации это полосы 2/3. Horse-модели со стрелками не разворачиваются.
+- Ключевые файлы: `src/render/ObstacleModels.ts`, `src/render/obstacleVisualVariants.ts`, `src/render/GameScene.ts`, `tests/unit/obstacleModels.test.ts`, `tests/unit/obstacleVisualVariants.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **382/382** ✓, build ✓. Browser render-QA заблокирован аварийным завершением локальной browser runtime.
+
+### [2026-08-31] — Semantic obstacle models + Frontier Town — реализовано, ждёт визуальный playtest
+
+- Car micro: полосы 0/3 получают конусы, бочки, шины и дорожные барьеры; полосы 1/2 — только велосипеды, мотороллеры, самокаты и cargo-trike. Выбор стабилен по ID/group и не мерцает при pooling.
+- Medium car: пять силуэтов легкового транспорта (sedan/hatchback/pickup/coupe/wagon); жёлтый tint при обычной игре и зелёный при nitro/ready. Tall: box truck, city bus, coach, dump truck, semi с красным gameplay-tint.
+- Horse jump: fence/crates/hay/trough/log; slide: ranch gate/mine frame/rock arch, в town — saloon awning/station frame; dodge/tall: stagecoach/wagon/bison/mine cart/barricade/boulder.
+- Все модели собраны из shared low-poly geometries; у дорожного транспорта вращаются колёса. Mesh pooling переведён с array-index на стабильные obstacle IDs, чтобы удаление первого объекта не пересобирало весь горизонт.
+- Визуальные размеры берутся из `obstacleFootprint`: micro/low/tall и `zExtent` совпадают с collision-контрактом. Generic mesh остаётся fallback для portal/transition; detailed silhouette сохраняется при slide/behind fade и при rocket после horse.
+- Добавлен редкий collision-free Frontier Town длиной 3–4 чанка: въездные ворота, фасады, навесы, вывески и props начинаются за краем трассы. Town palette приглушена и отделена от зелёно-жёлто-красной gameplay-палитры.
+- Tunables: `horse.frontierTownProbability`, `frontierTownIntroChunks`, `frontierTownMinChunks`, `frontierTownMaxChunks`, `frontierTownCooldownChunks`.
+- Ключевые файлы: `src/render/ObstacleModels.ts`, `obstacleVisualVariants.ts`, `FrontierTownScenery.ts`, `GameScene.ts`, `src/core/levelgen/LevelGenerator.ts`, `types.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **378/378** ✓, build ✓. Smoke покрывает 34 модели, finite transforms/bounds, колёса, lane semantics и нейтральность town для obstacle placement. Browser render-QA заблокирован аварийным завершением browser runtime.
+
+### [2026-08-31] — mega-traffic horse playtest-тюнинг — реализовано, ждёт playtest
+
+- Сжат контраст breather/overdrive: меньше «пустых» и «стен» mandatory; waveIntensityPeak 0.96→0.68.
+- Больше mix в группах: followup jump→slide/dodge ↑, mandatory ↓, dodge-only ↑, groupSizeBonus ↓.
+- Файлы: `configs/levelgen/presets/mega-traffic/horse-balance.json`, `horse-phases.json`.
+- Проверки: typecheck ✓, lint ✓, unit **370/370** ✓.
+
+### [2026-08-31] — Dual-branch levelgen presets + horse route guide — реализовано, ждёт playtest
+
+- Реестр preset-ов переведён на фиксированные слои `shared-balance → car-balance → horse-balance → car-phases → horse-phases`; новый preset подключается папкой из пяти JSON и одной записью metadata.
+- `grok-traffic`, `mega-traffic`, `ultimate-traffic` сохраняют прежние player ids/ярлыки, но теперь каждый включает отдельные car и horse ветки; horse rhythm настроен как calm/baseline/hard.
+- Все dev presets также имеют пять явных слоёв. Старые `balance.json` и root `production.json` оставлены как deprecated, но не участвуют в merge. `horse-traffic` сохранён как dev sandbox только для horse tuning.
+- Добавлен чистый action-aware horse lane-graph по точным Z-событиям. Path/rest coins выравниваются по comfort route; mandatory jump/slide получают подготовительные `safeGuide` coins. Car temporal fairness и destroy micro routeGuide не менялись.
+- Тесты покрывают порядок слоёв, обе включённые player-ветки, passability всех preset ids, ≥3 horse phases за 200 чанков и совпадение horse guides с route lane.
+- Ключевые файлы: `src/core/config/levelgenPresets.ts`, `src/core/levelgen/passability.ts`, `src/core/levelgen/LevelGenerator.ts`, `configs/levelgen/presets/*/`, `tests/unit/levelgenPresets.test.ts`, `tests/unit/horsePhases.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **370/370** ✓, build ✓.
+
+### [2026-08-31] — Car fairness staging + micro escape — реализовано, ждёт playtest
+
+- `GameSim.ensureChunks()` сначала собирает новый чанк в staging и сертифицирует общий горизонт до публикации.
+- `repairCarHorizon()` получает явный repair-scope: удалять можно только новые obstacle/ramp IDs; уже опубликованные сущности immutable и больше не исчезают перед игроком.
+- Каждый micro-кластер проверяется как точка входа со своей полосы; если новый чанк создаёт тупик, repair меняет только staged hazards.
+- Удалённые staged ramp-gates не оставляют ложные micro/coin guides. Намеренная очистка `syncTrackEndObstacles()` не менялась.
+- Регрессии: immutable published IDs, micro dead-end repair и последовательная генерация по 4 seeds × 14 шагов.
+- Ключевые файлы: `src/core/gameplay/GameSim.ts`, `src/core/levelgen/LevelGenerator.ts`, `tests/unit/carFairness.test.ts`, `docs/architecture.md`.
+- Проверки: typecheck ✓, lint ✓, unit **366/366** ✓, build ✓.
+
+### [2026-08-31] — Horse jump marker depth + camera + overhead arches — реализовано, ждёт playtest
+
+- Jump-стрелка (low): `depthTest: true`, позиция на лицевой грани препятствия — не рисуется поверх коня.
+- Камера коня: `horse.cameraYOffset` **0.42**; low preset базовый подъём **+0.48**; на подкате ниже (`slideCameraYOffset -1.82`, low slide **-0.98**), после подката blend возвращает baseline.
+- Overhead slide-арки в horse visual: высота **×1.25**, дырка **×1.3** (визуал + коллизия в horse mode).
+- Ключевые файлы: `src/render/GameScene.ts`, `src/core/gameplay/Collision.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **363/363** ✓.
+
+### [2026-08-30] — Car fairness v2 + survival route guides — реализовано, ждёт playtest
+
+- Новый временной car-валидатор строит маршрут из фактической входной полосы на reference speed 28 м/с, учитывает `laneFlow`, `zExtent`, 0.15 с на одну полосу, 0.28 с между решениями и 0.08 с padding препятствия.
+- Full-row nitro больше не считается телепортом между полосами: при истечении заряда безопасный контракт сохраняет текущую полосу.
+- После compaction каждый car-чанк повторно сертифицируется; опасная комбинация чинится минимальным удалением обычного hazard. После склейки чанков тот же контракт проверяет дальний видимый горизонт, не затрагивая близкие столкновения и активные ramp-gates.
+- Destroy micro перераспределяются как 65% route guides / 35% свободных или рискованных кластеров без общего роста штатного количества. К обязательному ramp прикрепляются 2 коротких guide-кластера, к свободному — 1; подсказки скроллятся вместе с ramp.
+- В coin-режимах `safeGuide` следует сертифицированному маршруту только при реальной развилке; часть обычных монет сохраняет более выгодный risk-choice без увеличения числа монет.
+- Tunables: `levelgen.fairness.referenceSpeed`, `laneSwitchSeconds`, `minDecisionSeconds`, `obstaclePaddingSeconds`, `routeGuideShare`, `mandatoryRampGuideClusters`, `freeRampGuideClusters`.
+- Ключевые файлы: `src/core/levelgen/passability.ts`, `LevelGenerator.ts`, `src/core/gameplay/GameSim.ts`, `configs/levelgen.default.json`, `tests/unit/carFairness.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **363/363** ✓, build ✓.
+
+### [2026-08-30] — Player turn readability + rocket landing orientation — реализовано, ждёт playtest
+
+- Horse blaster скрыт только визуально; gameplay-состояние, pulse и свойства способности не менялись.
+- Car/horse render-only steering усилен: быстрее вход, дольше возврат, заметнее yaw/roll; у car сильнее доворачиваются передние колёса, у horse — корпус и голова.
+- Rocket в фазе `fall` больше не сбрасывает rotation в вертикаль и остаётся носом вперёд до смены режима.
+- Ключевой файл: `src/render/GameScene.ts`; core, hitbox и lane-механика не менялись.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-29] — Horse slide/steering + cloud anchor tune — реализовано, ждёт playtest
+
+- Car на train теперь едет прямо: удалён декоративный `trainFx`-spin вокруг трёх осей.
+- Horse camera поднята мягко: `cameraYOffset -0.55 → -0.25`; render-only back offset `0.3` сохраняет перспективу без top-down.
+- Horse rig стал спортивнее: уже torso/chest/head, тоньше и длиннее neck, уже постановка ног.
+- Shoulder slide заменён на reining/flat-track hybrid: небольшой yaw/lean, задние ноги уходят под корпус, передние продолжают короткий шаг, голова опускается под препятствие.
+- Car/horse получают render-only yaw/roll по фактической lateral-скорости `laneX`; передние колёса машины визуально поворачиваются. Gameplay steering/hitbox не менялись.
+- Clouds: количество `11 → 15`; каждый слой держит постоянный screen-Y offset относительно камеры и продолжает parallax только по Z.
+- Ключевые файлы: `src/render/GameScene.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓, build ✓.
+
+### [2026-08-29] — Low-poly players + cloud parallax — реализовано, ждёт playtest
+
+- Car: спортивный вытянутый кузов, кабина, спойлер, свет и четыре колеса со speed-driven вращением.
+- Rocket: составной корпус, нос, стабилизаторы и пульсирующий полупрозрачный дым; `cameraYOffset` снижен с `1.6` до `1.35`.
+- Horse: корпус/шея/голова/хвост и четыре двухсегментные ноги; gait ускоряется вместе со скоростью, jump использует tuck-позу.
+- Horse slide: без squash — модель кинематографично заваливается на внешний бок, вытягивает ноги и оставляет слабый dust-след.
+- Visual bounds отделены от gameplay: `game.player.width/height/depth`, Collision и LevelGen не менялись; дополнительная длина моделей направлена назад.
+- Два редких cloud-слоя скроллятся с коэффициентами `0.03`/ `0.07`, opacity `0.035`/ `0.055` и мягко меняют оттенок между режимами.
+- Принятый side decor затюнен: guards `0.18 → 0.11`, offset `+0.55 → +0.85`, билборды/знаки вдвое реже.
+- Ключевые файлы: `src/render/GameScene.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓, build ✓; browser render-QA заблокирован системным Windows sandbox.
+
+### [2026-08-29] — Car guards vs horse west side decor — реализовано, ждёт playtest
+
+- `GameScene`: вдоль трассы циклически скроллятся секционные отбойники, фонари через 20 м, редкие билборды и дорожные знаки.
+- Horse-слой: кактусы, дальние low-poly холмы, скалы и деревянные ящики с шагом 10 м и боковым stagger.
+- Слои синхронно уходят/выезжают из земли за `horse.environmentTransitionSeconds`; в rocket сохраняется последний car/horse-слой.
+- Render tunables оставлены константами `SIDE_DECOR_*`; `rocket.cameraYOffset` снижен с `2.2` до `1.6`.
+- Ключевые файлы: `src/render/GameScene.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓, build ✓.
+
+### [2026-08-29] — Low camera polish (train, slide, bounce, jelly) — реализовано
+
+- Машина на поезде: lift как нитро; рамп — сильнее jump lift; конь jump ×1.45.
+- Подкат коня: плавный `horseSlideCamFx` (без скачков), камера выше в low.
+- Landing cam bounce (мягкий; horse jump ~22% базы); lateral jelly на camX.
+- Дефолт пресета камеры: `low`.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-29] — Low camera lift: horse + rocket + jumps — реализовано
+
+- Пресет «низко»: подъём при ускорении коня (`horseSpeedFx`/`boost`), полёте ракеты, прыжках машины и коня.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-29] — Visual lab tune (убрать haze, low cam lift, тень) — реализовано
+
+- Удалён новый atmospheric haze + ACES toggle; music fog (F3) без изменений.
+- Пресет «низко»: подъём камеры при нитро (+1.15y) и в полёте (+1.05y + look lift).
+- Contact shadow: on по умолчанию; opacity max 0.52, размер ×1.22.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-29] — Visual lab UI (камера, тень, туман) — реализовано
+
+- Видео: режим horizon по умолчанию; чекбокс preview убран из top-right UI.
+- Пресеты камеры: `default`, `overview`, `corridor`, `chase`, `low` — select «камера» в `AudioControls`.
+- Contact shadow: radial blob под игроком, fade по высоте; чекбокс «тень» (off = как раньше).
+- Atmospheric haze: fog near/far + ACES tonemapping; чекбокс «туман» (off = текущий look).
+- Файлы: `src/app/visualLab.ts`, `GameScene.ts`, `AudioControls.ts`, `bootstrap.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-28] — Obstacle panic flee + balance tune — реализовано
+
+- Резкий despawn low → `obstaclePanicFlee` только для mandatory nitro row (0.8s flee).
+- `beatLaunch` +30%; shoulder passers 5.8% / speed 3.05 / early ×1.85; salvation min 60%, chance ↑.
+- Проверки: typecheck ✓, lint ✓, unit **355/355** ✓.
+
+### [2026-08-28] — Beat launch, shoulder passers, salvation tune — реализовано
+
+- `beatLaunch`: `speedPerBeat` 0.49, `maxBonus` 4.42 (+30%, порог бита без изменений).
+- Shoulder passers: prob 5.8%, speed ×3.05, early rows ×1.85 шанс.
+- Salvation: min nitro **60%**, `baseChance` 0.16, `lateProgressBonus` 0.40.
+- Проверки: typecheck ✓, lint ✓, unit **351/351** ✓.
+
+### [2026-08-28] — Train companion sync + counterflow fairness — реализовано
+
+- Поезда: парный ride без `parallelRideDrainScale`; companion `rideDuration` = source; sync `rideRemaining`; без roof obstacle на паре; transfer window расширён.
+- Counterflow: `isPassableAsCarTemporal` (linger); tall на lane 1 → low при temporal fail; ahead-check в GameSim.
+- Tunables: `counterflowPassabilityLingerSeconds` 1.85.
+- Проверки: typecheck ✓, lint ✓, unit **351/351** ✓.
+
+### [2026-08-28] — Late ease, early traffic, nitro heal, rocket coins — реализовано
+
+- Конец трека: `lateSongEase*` (−5.5% density к финалу); nitro late spawn чуть ниже.
+- Старт: `contentStartZ` 12 м; `forcedObstacleRows` 14 (destroy car); density bonus early ↑.
+- Нитро лечит HP по `audioClearSeconds` (синхрон с музыкой); adrenaline regen при low HP.
+- Ракета: `coinEndBufferSeconds` 2.6; anticipation в fall timing; сброс монет при phase `fall`.
+- Конь: jump clear tolerance ↑; landing momentum после collision; touchdown overlap не сбрасывает momentum.
+- Проверки: typecheck ✓, lint ✓, unit **350/350** ✓.
+
+### [2026-08-28] — Wall cooldown, salvation VFX, shoulder passers, lanes — реализовано
+
+- Wall: `wallProbabilityNoNitro` 0.022, cooldown 8 с; shoulder passers на крайних полосах (3.4%, fast crush).
+- Salvation: шанс до **45%** к концу; flash на игроке/HUD; mega-smash связанного объекта.
+- Убран smash hit-pause; полосы −20%; поезда: parallel 0.38 / counterflow 1.55; конь — jump с ramp в landing.
+- Проверки: typecheck ✓, lint ✓, unit **348/348** ✓.
+
+### [2026-08-28] — Nitro salvation + итерация tall/камера — реализовано
+
+- `nitro.salvation`: critical HP, нитро ≥70%, сложный но проходимый lookahead; шанс 7%→~18% к концу трека; добивка до 100% после обычного gain.
+- Файлы: `nitroSalvation.ts`, `GameSim.ts`, `game.default.json`, unit.
+- Проверки: typecheck ✓, lint ✓, unit **347/347** ✓.
+
+### [2026-08-28] — Tall tuning + ракета камера — реализовано
+
+- `tallDepth` 6.0 → **5.1** м (−15%); `tallProbability` 0.42 → **0.36**, `earlyTallBias` 0.10.
+- Ракета: камера Y с anticipation (blend 0.55), follow rate 15; крен `cameraBankAngle` 0.44, `launchCameraLaneBankScale` 0.38; lag pitch раньше.
+- П.3 «чудесное спасение» — реализовано (см. блок выше).
+- Проверки: typecheck ✓, lint ✓, unit **342/342** ✓.
+
+### [2026-08-28] — Tall red: −25% depth + ≤2 в полосе — реализовано
+
+- `obstacle.tallDepth`: 8.0 → **6.0** м (коллизия и визуал; fallback синхронизирован).
+- Генератор: трекер `laneTallRowStreak` — не больше **2** красных `tall` на соседних рядах в одной полосе (до compaction); compaction `maxChainTall` = 2 как было.
+- Файлы: `game.default.json`, `fallbacks.ts`, `LevelGenerator.ts`, `obstacleCompaction.ts`, unit.
+- Проверки: typecheck ✓, lint ✓, unit **342/342** ✓ (`isPassable` по пресетам без регрессии).
+
+### [2026-08-28] — Tall hitbox vs visual — hotfix
+
+- Красные `tall`: меш брал геометрию `lowDepth` и скейлил Z как `depth/tallDepth` (=1) → визуал ~2.3 м при коллизии 8 м.
+- Скейл от базового low-меша теперь `footprint / lowWidth|lowDepth`; длина совпадает с хитбоксом. Low/micro без изменения контракта.
+- Файлы: `obstacleFootprint.ts`, `GameScene.ts`, unit.
+- Проверки: typecheck ✓, lint ✓, unit **341/341** ✓.
+
+### [2026-08-28] — Бета фазы 0–1: контракт + fairness lock — реализовано
+
+
+- Фаза 0: страница игрока `docs/beta-player.md`; triage `docs/beta-triage.md`; ярлыки Destroy / Classic / Adrenaline; сложности Спокойнее / Обычный / Мясо = `grok-traffic` / `mega-traffic` / `ultimate-traffic`; прочие gen и adren — `?dev=1`.
+- Подсказка нитро: пробел. Production-дефолт Destroy + `mega-traffic`; adren игрока = `default`.
+- Фаза 1: `isPassable` учитывает `zExtent` (возврат в полосу). Compaction не расширяет тело на ряд, которого не было у пары.
+- Late-nitro: не Blocker (чанки проходимы). Smoke Classic/Adrenaline: старт, HUD-контракт, car/horse/rocket, death, restart.
+- Проверки: typecheck ✓, lint ✓, unit **338/338** ✓.
+
+### [2026-08-28] — Бета-план final — принят по опросу
+
+
+- `docs/beta-ultimate-final.txt`: оболочка до slice; чужие после моделей; конь и ракета — модели; 2–3 сложности; QA мягкий; A6 не блокер ссылки; хвосты fairness — Blocker до арта.
+- Код не менялся. Ждём указания, с какой фазы стартовать.
+
+### [2026-08-28] — Бета-план ultimate — документ
+
+- `docs/beta-plan-ultimate-grok.txt`: склейка gemini/gpt/grok/muse (гейты + slice + селект режимов + купленный kit).
+- Код не менялся.
+
+### [2026-08-28] — Бета-план v2 — решения зафиксированы
+
+- `docs/beta-plan-v2.txt`: аудитория 5–20 по ссылке/itch; Destroy дефолт + селект Classic/Adrenaline и сложности; простые купленные модели на критическом пути.
+- Черновик `docs/beta-plan-grok.txt` не использовать как карту.
+- Код не менялся.
+
+### [2026-08-28] — Карта прототип → бета — документ
+
+- `docs/beta-plan-grok.txt`: фазы 0–7, определение беты, cut-list, процесс.
+- Допущения A–E в §0 ждут подтверждения пользователя.
+- `status.md`: ссылка в «Куда смотреть».
+
+### [2026-08-28] — Фикс фантомных ударов длинных грузовиков — реализовано
+
+- Коллизия Z: для tall/overhead/склеенных (`zExtent`) — интервал + `zRearTrimRatio` 0.18 (хвост не бьёт после проезда).
+- Compaction: центр пачки в середине цепочки (визуал = хитбокс).
+- Легковые: прежняя логика `zGrace` по центру.
+
+- Грузовики: **1.50 × 8.0** (+25% длины), h 2.05.
+- Compaction v2: соседние в ряду low/tall сливаются **макс. по 2**; `zExtent` ≈ base × 1.12, не «вся цепочка».
+- Micro-пачки: **2–3** (было 2–4).
+- `isPassable` + unit compaction: **327/327** ✓.
+
+- Легковые: **1.20 × 2.32** (уже).
+- Грузовики: **1.50 × 6.40** (+20% длины), высота **2.05**.
+
+- Вернули: `tallProbability` 0.42, `twoObstacleBias` 0.5, `mediumDensityScale` 1.05, compaction span как было.
+- Габариты low/tall (1.26×2.32 / 1.50×5.33, tall h 2.16) **без изменений**.
+
+- Легковые (`low`): **1.34 × 2.2** (было 1.58 × 2.35) — уже, силуэт седана.
+- Грузовики (`tall`): **1.50 × 4.1** (было 2.58 × 4.65) — чуть шире легковой, заметно длиннее.
+- Арка/micro без изменений. Конфиг + fallback.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+- Арка (`overhead`) больше не наследует габариты грузовика: коллизия и рендер — `obstacle.width`×`depth` (2.0×1.5); грузовики — `tallWidth`×`tallDepth`.
+- Стрелка подката: вынесена на передний край арки (`overheadDepth/2`), `renderOrder` + `depthTest: false` — не прячется внутри меша.
+- Проходимость: `isPassable` по-прежнему lane-based (unit); глубина коллизии по `obstacleFootprint`.
+- Файлы: `obstacleFootprint.ts`, `GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+- Визуал low/tall в `GameScene`: low — `lowWidth` 1.58 × `lowDepth` 2.35 (силуэт легковой); tall — `tallWidth` 2.58 × `tallDepth` 4.65 (длинный грузовик); low-chunks и vacuum FX на тех же габаритах.
+- `mediumDensityScale` 1.05 — чуть больше средних объектов (levelgen).
+- Cadence конь↔машина: первый конь 30–40 с (`firstHorseMinSeconds` / `firstHorseGuaranteedSeconds`); далее переключения каждые ~12–22 с, к финалу ~8–11 с (`modeBonus*` / `carBonus*` / `lateSongSwitch*`).
+- `carToHorseOfferOverdue()` — гарантия первого коня по `gameTime`, не только по `modeSwitchElapsed`.
+- Файлы: `GameScene.ts`, `GameSim.ts`, `game.default.json`, `fallbacks.ts`, `schemas.ts`, tests.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+### [2026-08-28] — Ракета: камера lag/overshoot, audio arc, конец трека — реализовано
+
+- Камера взлёта: сначала лаг снизу + взгляд вниз; к плато — подъём и top-down; на плато — overshoot и возврат (`launchCameraLagToTop*`).
+- Rocket audio: muffle по дуге в anticipation → пик к turbo; резкий snap в turbo shelf/gain; release при выходе из ракеты.
+- Конец трека: fade громкости за 10 с (`audio.trackEndFadeSeconds`); препятствия/рампы исчезают за 5 с (`levelgen.trackEndObstacleStopSeconds`).
+- Файлы: `GameScene.ts`, `AudioGraph.ts`, `AudioSession.ts`, `bootstrap.ts`, `LevelGenerator.ts`, `GameSim.ts`, configs.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+
+- Ракета: камера снизу вверх при взлёте (`launchCameraPitchMax` 0.34, dip/pullback); на входе в плато — bounce снизу вверх (`launchCameraPitchBounce`, `launchCameraPlateauBounceSeconds` 0.5), затем нормаль; боковой крен убран.
+- `nitroLateChargeGainScale` 0.52 → **0.45** — ещё меньше нитро от разрушений к концу трека.
+- Ранний уровень: `earlyTallBias` 0.12 (только первые `earlyTraffic.rows`, глобальный `tallProbability` без изменений).
+- Ключевые файлы: `GameScene.ts`, `game.default.json`, `levelgen.default.json`, `LevelGenerator.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+
+- `nitroLateChargeGainScale` 0.52 (меньше нитро от smash к концу трека).
+- `nitroMediumSpawnScale` 0.32, `nitroLateMediumSpawnScale` 0.58 — меньше зелёных под нитро.
+- Lane commitment: 3.2 с / 2.35 с при нитро (чаще tall на застойной полосе).
+- `laneFlow` встречка полоса 2: 12 → 17.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+### [2026-08-28] — Playtest тюнинг: ракета, сложность, поезд, nitro audio — реализовано
+
+- Ракета: крен при взлёте (`launchCameraClimbRoll` 0.26), слабый крен на поворотах (`launchCameraLaneBankScale` 0.3).
+- Ранняя сложность: `longRunDifficulty` delay 22 / ramp 150; `nitroLateStartProgress` 0.24.
+- Tall: `tallHeight` 2.42, `tallDepth` 4.65.
+- Попутный поезд: `parallelScrollScale` 0.55, `parallelRideDrainScale` 1.45.
+- Nitro audio: shelf 4.8 dB, gain boost 0.078.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+### [2026-08-28] — Destroy: late-run nitro traffic — реализовано
+
+- С 40% трека плавно снижается набор нитро от micro/уклонений до 65% к финалу; активный smash сохраняет полную награду.
+- В Destroy/classic car при активном нитро поздние low/micro и старые nitro-challenge ряды становятся реже, tall — чаще; используются `songProgress` и `longRunProgress`.
+- `nitroSmashRowChance` сохранён на 0.2, `nitroTrafficMinLeadSeconds` — 3.4 с; compaction не менялся.
+- Tunables: `nitroLateStartProgress`, `nitroLateChargeGainScale`, `nitroLateChallengeScale`, `nitroLateMicroSpawnScale`, `nitroLateMediumSpawnScale`.
+- Ключевые файлы: `LevelGenerator.ts`, `GameSim.ts`, `difficulty.ts`, game config/schema/fallback, `destroyNitroBalance.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **325/325** ✓.
+
+### [2026-08-28] — Формы, ракета, поезда, нитро-reds, камера взлёта — реализовано
+
+- Low уже (`lowWidth` 1.58), tall длиннее +30% (`tallDepth` 3.58).
+- Монеты ракеты только с плато (`time >= launchSeconds`).
+- `launchSeconds` +30% (2.21); камера: dip anticipation→launch, return на последних 15% launch с bounce.
+- Поезда короче 25% (`lengthMultiplier` 0.585).
+- Нитро: больше tall (`nitroTallProbabilityScale` 1.82, max 1 green/lane), lead 3.4 с.
+- Проверки: typecheck ✓, lint ✓, unit **321/321** ✓.
+
+### [2026-08-28] — Car Feel Update (волны 1–3) — реализовано
+
+- **П.1:** `trainHorseOffer` — сфера коня не спавнится при roof `tall`/`overhead` между игроком и целью; не считается пропуск.
+- **П.4:** game over — блок ввода 2 с (`bootstrap.ts`).
+- **П.2:** ракета — подъём по `rocketPlayerYAtTime` в anticipation; монеты по дуге; без второго скачка на launch.
+- **П.3:** `obstacleFootprint` (low 1.75×2.35, tall 2.25×2.75); визуал в `GameScene`; compaction (safe, без challenge/redWall).
+- **П.5:** нитро traffic на всех car: cap greens/lane, `nitroSmashRowChance` 0.24, occasional smash row.
+- **П.6:** `LaneCommitment` в `GameSim` → `setLaneCommitment`; tall на застойной полосе + `constraintLane` blend; `setCarTraffic` для classic car.
+- Конфиг: `game.default.json` — новые поля obstacle/destroy.
+- План: `docs/car-feel-update-plan.md`.
+- Проверки: typecheck ✓, lint ✓, unit **321/321** ✓.
+
+### [2026-08-26] — Destroy: instant green burst, nitro audio, particles — реализовано
+
+- Green burst сразу при столкновении; particles cap 5.
+- Nitro audio: за 1.5s снимает damage-muffle → без паузы nitro-boost (high-shelf + gain).
+- `nitro.audioClearSeconds` / `audioShelfGainDb` / `audioGainBoost`.
+- Проверки: typecheck ✓, lint ✓, unit **319/319** ✓.
+
+### [2026-08-26] — Destroy: green burst FX, nitro dodge — реализовано
+
+- Green knockback: взрыв через ~0.09s после старта отлёта (`knockbackBurstFx` + fragments в `GameScene`).
+- `destroy.gainPerDodge` 2.5 → 3.2.
+- Конфиг `mediumKnockbackGreenExplodeDelaySeconds` / `ExplodeStrength`.
+- Проверки: typecheck ✓, lint ✓, unit **320/320** ✓.
+
+### [2026-08-26] — Destroy: green knockback fix, audio damaged, combo spring — реализовано
+
+- `damageAudioDamagedStress` 0.46 → 0.58.
+- Green knockback: то же боковое направление что у жёлтого; дуга «через капот» (высокий arc, forward Z, lateral с задержкой); первый hit при ready-nitro тоже отлетает (соседи взрываются).
+- Combo badge: spring жёстче (64/56/48, damping 18/17/15).
+- `mediumKnockbackGreenForwardSpeed` (−3.6) вместо towardCamera.
+- Проверки: typecheck ✓, lint ✓, unit **319/319** ✓.
+
+### [2026-08-26] — Destroy: green knockback, combo UI, конь на рампе — реализовано
+
+- Knockback medium: жёлтый (тяжелее/медленнее, к внешнему краю) и зелёный (быстрее, через игрока к камере); цепочка не ломает объекты впереди.
+- Combo 3D: только счётчик разрушений, без `×N`, меньше по размеру.
+- `horseRampPickupChance` 0.7 → 0.84.
+- Конфиг `mediumKnockbackGreen*` / `mediumKnockbackYellowSpin`; тесты knockback.
+- Проверки: typecheck ✓, lint ✓, unit **319/319** ✓.
+
+### [2026-08-26] — Destroy UX: audio/combo/ракета/конь/поезд — реализовано
+
+- Audio глухота: attack/release ×0.7 (скорость восстановления HP −30%); `damaged` stress 0.46, `critical` 1.0.
+- Ракета: `fuelSeconds` 4.9 → 3.92 (−20%).
+- Combo 3D: дальше от машины (Z −2.1), цифры ближе, jelly −50%, шрифт крупнее.
+- Конь раньше: `firstHorseMinSeconds` 26, `modeBonusMinSeconds` 22, `modeBonusMaxSeconds` 58.
+- Поезд после рампы реже: `lateSongHorseRampTrainChanceMultiplier` 0.46 + scale 0.82 на ramp spawn.
+- Проверки: typecheck ✓, lint ✓, unit **317/317** ✓.
+
+### [2026-08-26] — Destroy п.5: knockback жёлтого medium — реализовано
+
+- Удар в жёлтый `low` (машина, все режимы): дуга к внешнему краю, цепочка low/micro на пути; tall — жёлтый взрывается.
+- Зелёный smash @ full nitro — взрыв на месте, без knockback.
+- Audio: attack 0.28s / release 0.05s; combo 3D позади (−Z), крупнее, без вращения.
+- `obstacleKnockback.ts`, тесты; конфиг `mediumKnockback*` в `destroy`.
+- Проверки: typecheck ✓, unit **317/317** ✓.
+
+### [2026-08-26] — Destroy: 3D combo, audio LP, nitro medium↓, train nitro — реализовано
+
+- Поезд: Space **активирует** нитро, не сбрасывает с крыши; полосы — только стрелки.
+- Нитро traffic: `nitroMediumSpawnScale` 0.56 — меньше жёлтых/зелёных medium в окне нитро.
+- Audio: серийный lowpass на весь трек (`minHz` 900, gain −24%); stress damaged 0.72.
+- Combo: 3D badge позади игрока со spring-lag (canvas plane в `GameScene`); HUD combo скрыт.
+- Проверки: typecheck ✓, lint ✓, unit **315/315** ✓.
+
+### [2026-08-26] — Destroy: HP на yellow, FX/audio, nitro traffic, train bail — реализовано
+
+- **Почему не было FX:** жёлтый medium давал soft hit без смены `damageState` — аудио/гамма не включались.
+- Жёлтый `low` без full nitro → classic `registerHit` + сильнее тормоз (`mediumHitSpeedPenalty` 0.15).
+- Усилены damage overlay (grade + vignette), fog tint, audio wet/lowpass (`damageAudioMaxWet` 0.58, `minHz` 3800).
+- Micro проигрывает в `entityCrush` при overlap с low/tall.
+- При активном нитro: levelgen ↑ tall / ↓ micro в окне `[speed×lead, speed×nitroLeft]` (organic horizon).
+- Поезд: Space/nitro с крыши = bail (`trainExit`); roof obstacle не у зоны посадки.
+- П.5 knockback (объект отлетает, не игрок) — уточнён, следующая итерация.
+- Проверки: typecheck ✓, lint ✓, unit **315/315** ✓.
+
+### [2026-08-26] — Destroy: конь ломает micro — реализовано
+
+- В Destroy конь разбивает `micro` при касании (как машина): `gainPerMicroBreak` → `nitroCharge`, combo smash.
+- `GameSim.ts`: условие `car || horse`; тест `destroyMode.test.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **314/314** ✓.
+
+### [2026-08-26] — Destroy mode MVP (волны 1–5) — реализовано
+
+- Новый режим **Destroy** — дефолт в селекте; Classic + Adrenaline сохранены.
+- **HP:** classic 3-hit, шкала скрыта; medium жёлтый = soft hit; tall = classic hit + blink.
+- **Препятствия:** `micro` (автолом, нитро+combo), `low` зелёный @ full nitro, smash без активации.
+- **Levelgen:** car coins off → micro clusters (2–4); medium density ↑; micro не блокирует passability.
+- **Audio:** глобальный lowpass/wet при damaged/critical (шутерный feel, умеренно).
+- Документ: `docs/destroy-update.md`; adren-update ⏸.
+- Проверки: typecheck ✓, lint ✓, unit **313/313** ✓.
+
+- **HUD ADREN:** свечение fill + wrap по tier (зел/жёлт/красн); flash heal/damage восстанавливает tier shadow/border, не зелёный дефолт.
+- **HUD NITRO:** flash восстанавливает текущее голубое свечение (full/active).
+- **P2 VFX:** при car+nitro smash low — только green vacuum (без жёлтых fragments); частицы крупнее (`baseScale` 0.52–0.74).
+- Файлы: `src/ui/HUD.ts`, `src/render/GameScene.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+- **Fix:** красная вспышка penalty break только у столкнувшегося low (per-obstacle chunk material).
+- **P2:** green vacuum — burst в стороны/вверх → машина проезжает → притягивание сзади (z < −0.22), ~0.5 с.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-24] — Adren волна 3 (P1,P3,P4,P5) + баланс — реализовано
+
+- **Баланс:** `rocket.fuelSeconds` 7→4.9 (−30%); air-coin HP bonus + `gainCoinRocketMultiplier` 1.68; `nitro.gainPerCoin` 4.35.
+- **O1–O2 fix:** при развале low-чанки остаются жёлто-зелёными, не зелёными.
+- **P1:** трещины на корпусе от низкого HP (все режимы).
+- **P3:** удар машиной без нитro — искры + моргание.
+- **P4:** яркий зелёный контур/outline при full nitro → decay после активации.
+- **P5:** усиленный пульс шкалы NITRO при 100%.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-24] — Adren O1–O2: тюнинг chunk mesh — реализовано
+
+- Разлёт чанков **5%**; глубина low **78%** (лучше различимость по длине).
+- Full nitro: лёгкий **жёлто-зелёный** tint вместо затемнения.
+- Плавное раскрытие чанков (~0.38 с) + eased разлёт при penalty break.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-24] — Adren O1–O2: chunk mesh low (15% + наклон) — реализовано
+
+- Low при full/active nitro: **3 чанка** вместо полос трещин; зазор и разлёт **15%** ширины; наклон по оси X/Z.
+- Активное нитро — зелёные чанки; penalty break — красная вспышка + разлёт чанков.
+- `GameScene.ts`: `createLowChunkMeshes`, `applyLowChunkPose`; удалены crack overlay/stripes.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-24] — Adren update волны 1–2 — реализовано (stripes → заменены chunk mesh)
+
+- **O1–O3:** трещины на low при full nitro; зелёный tint + трещины при активном нитро; красная вспышка при ударе в low без нитro.
+- **H1, R1:** моргание ADREN при падении; полоски дороги краснеют при низком HP (Adrenaline + Classic).
+- План: `docs/adren-update.md`; решения P2/T1/C2 зафиксированы.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-23] — Next Update волны 1–6 (juice + levelgen) — реализовано
+
+- HUD: flash ADREN/NITRO при пополнении и монетах; SMASH/combo от multiplier.
+- Render: coin sparks по режиму; vignette от Director; horizon grade + beat-kick; near-miss VFX.
+- Turbo/муз. сцена: cyan vignette без текста; safety corridor монет; hit-pause 50 ms на 1-м smash.
+- Beat launch: emissive на бите; rocket rescue (+22% HP монет при critical + cyan coins).
+- Levelgen: safeGuide ↑ (`obstacleGuideProbability` 0.58); preset **`horse-traffic`**.
+- Отложено после playtest: **S5** (pulse/postfx), **A6** (director calm).
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-23] — Ramp flight: монеты, поезд, HP в воздухе — реализовано
+
+- Машина в полёте с трамплина: gain монет как у ракеты (`gainCoinRocketMultiplier`).
+- Плотнее воздушная дуга монет: calm 6 / active 9 (было 5 / 7).
+- Поезд с трамплина не спавнится на полосе трамплина (`avoidLane`).
+- Проверки: typecheck ✓, unit **309/309** ✓.
+
+### [2026-08-23] — Adrenaline UX: виньетка по визуалу, пульс шкалы, фикс битов — реализовано
+
+- Виньетка Adrenaline по **визуальной** шкале (<50% / <25%), не по actual HP.
+- Пульсация полоски ADREN при visual <50%; монеты ×1.22 car/horse, ×1.45 rocket.
+- Старт уровня: pulse горизонта/неба привязан к скорости — меньше чёрных вспышек на битах.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-23] — Adrenaline: шкала HUD + бонус монет по режиму — реализовано
+
+- Шкала ADREN: мягче кривая (exp 1.62 + blend к linear на низком HP) — меньше «залипания» в конце.
+- Монеты: `gainCoinCar/HorseMultiplier` 1.12, `gainCoinRocketMultiplier` 1.26 поверх base `gainCoin`.
+- Проверки: typecheck ✓, lint ✓, unit **309/309** ✓.
+
+### [2026-08-23] — High Risk default + красный экран 50/25 + нелинейная шкала — реализовано
+
+- Default пресет адреналина: `high-risk`; пороги VFX 50/25% в `high-risk.json`.
+- Adrenaline: красная виньетка при damaged (<50%), усиленная пульсация при critical (<25%).
+- HUD: `adrenalineBarVisualPercent` (exp 1.85) — визуально быстрее пустеет в начале, медленнее на низком HP.
+- Проверки: typecheck ✓, lint ✓, unit **307/307** ✓.
+
+### [2026-08-23] — Пресет адреналина `gpt-5-redline` («GPT-5 Redline») — реализовано
+
+- Опрос: имя по модели; управляемая красная зона; прогрессивный дренаж и idle по рекомендации; collision остаётся Default 25%; восстановление — за мастерство.
+- Профиль: drain 6.3 / ramp 44 с / startScale 0.42; idle 1.4 с ×2.05; rocket drain ×0.72; VFX 65/35; critical nitro ×1.9.
+- Награды: smash 18, coin 0.8, near miss 4.5, horse jump/slide 10/8, nitro burst 5. Красная зона образует comeback-петлю через риск → нитро → burst/smash.
+- JSON: `configs/adrenaline/presets/gpt-5-redline.json`; регистрация в `adrenalinePresets.ts`; отдельный unit-тест. `collisionDamage` не дублируется и наследует base.
+- Gameplay-код, HUD, Director, LevelGen, Classic и `game.default.json` не менялись.
+- Проверки: typecheck ✓, lint ✓, unit **305/305** ✓.
+
+### [2026-08-23] — Пресет адреналина `grok-pressure` («Grok Pressure») — реализовано
+
+- Тезис (опрос): Pressure cooker — жёсткий дренаж, удар как default, выживаешь темпом и движением.
+- JSON: `configs/adrenaline/presets/grok-pressure.json` — drain 7.2 / ramp 40с / startScale 0.70; idle 1.6с ×1.95; smash 18, монеты 1.8, near miss 4, horse 10/8. Удар, VFX 60/30 и крит-нитро 1.55 не тронуты.
+- Регистрация: `adrenalinePresets.ts` (id `grok-pressure`, label «Grok Pressure»).
+- Тест: резолв + отличия от base (drain, idle, near miss; collision как default).
+- Проверки: typecheck ✓, lint ✓, unit **304/304** ✓.
+
+### [2026-08-23] — Пресет адреналина `ox-alpha` («Медленное удушье») — реализовано
+
+- Концепт (по опросу пользователя): спокойный фон, давление только через простой в полосе; восстановление/урон/крит-буст как default.
+- JSON: `configs/adrenaline/presets/ox-alpha.json` — 4 override-поля: `passiveDrainPerSecond` 5.5→4.5, `idleLaneDrainBonus` 1.61→2.2, `damagedThresholdPercent` 60→50, `criticalThresholdPercent` 30→25.
+- Регистрация: `src/core/config/adrenalinePresets.ts` (`ADRENALINE_PRESET_IDS`, label «Ox Alpha»).
+- Тест: `tests/unit/adrenalinePresets.test.ts` — резолв + отличия от base.
+- Проверки: typecheck ✓, lint ✓, unit **303/303** ✓.
+
+### [2026-08-23] — Пресеты адреналина (как levelgen) — реализовано
+
+- `adrenalinePresets.ts`: реестр, merge, Zod-валидация, localStorage `adrenaline-preset-id`.
+- JSON: `configs/adrenaline/presets/default.json`, `high-risk.json` (пример).
+- UI select `adren` рядом с `mode` / `gen`; `GameSim.applyAdrenalineConfig`; hot-reload `game`.
+- Проверки: typecheck ✓, lint ✓, unit **302/302** ✓.
+
+### [2026-08-23] — Откат 3D-колец → компактный 2D HUD — реализовано
+
+- Удалён `PlayerOrbitMeters`; NITRO/ADREN снова в `HUD.ts` внизу экрана.
+- Ширина 480px (было 720), высота 22/20px, подписи 13px; horse momentum в том же стиле.
+- Проверки: typecheck ✓, lint ✓, unit **298/298** ✓.
+
+### [2026-08-23] — 3D-бублики HP/нитро: polish — реализовано
+
+- Сплошные кольца вместо отдельных сфер; меньший радиус, толще «трубка».
+- Позиция за корпусом (`Z_BEHIND`, offset от `playerWidth`), не выпирают в стороны.
+- Fix: parent на `playerMesh`, z на задней грани, `depthWrite` — корпус перекрывает центр колец.
+- Нитро: блеклое при низком заряде, яркое свечение при полном.
+
+### [2026-08-23] — 3D-бублики HP и нитро у персонажа — реализовано
+
+- `PlayerOrbitMeters`: 10 сегментов-колец слева (vitality) и справа (nitro), billboard к камере.
+- Classic: vitality по `damageState` (100/66/33%); Adrenaline: % адреналина; нитро только в `car`.
+- Интеграция в `GameScene`; 2D NITRO/ADREN в `HUD` скрыты; horse momentum HUD без изменений.
+- Проверки: typecheck ✓, lint ✓, unit **298/298** ✓.
+
+### [2026-08-23] — Horse levelgen presets (Mega Traffic) — реализовано
+
+- `HorsePhasePlanner`: фазы corridor / weave / breather / overdriveTease + волны.
+- Пресет `mega-traffic/horse-phases.json`; merge в `levelgenPresets.ts`.
+- Схема `levelgen.horse.*` расширена; default `phasesEnabled: false`.
+- Интеграция в `generateHorseChunk`: action/rest/dodge/follow-up/group size.
+- Brief: `docs/levelgen-horse-brief.md`.
+- Проверки: typecheck ✓, unit **298/298** ✓ (passability horse per preset).
+
+### [2026-08-23] — Beat launch: ускорение от сильных битов в начале — реализовано
+
+- Первые **36 с** в машине: сильный бит (energy ≥ 0.65) → **+0.38** к скорости навсегда (cap **3.4**).
+- Конфиг `beatLaunch` в `game.default.json`; логика `GameSim` + `PlayerSim`.
+- Проверки: typecheck + test.
+
+### [2026-08-23] — Adrenaline polish: VFX, drain, critical nitro — реализовано
+
+- Биты: сглажение pulse/kick (~25%), горизонт-видео и камера мягче.
+- Экран Adrenaline: пороги 60/30%, оранжевая виньетка (damaged), красная пульсация (critical), flash при ударе.
+- Скрытый boost нитро при <30%: `criticalNitroGainMultiplier` 1.55.
+- Дренаж +~22%: passive 5.5, idle ×1.61.
+- Убран low-HP множитель урона (×1.5 → ×1).
+- Проверки: typecheck + test.
+
+### [2026-08-23] — Adrenaline: нитро без прилива HP — принято
+
+- Включение нитро больше не даёт адреналин; цель нитро — smash (`gainSmash` без изменений).
+- `gainNitroBurst` 22→0; убран вызов в `GameSim.ts`.
+
+### [2026-08-23] — Adrenaline: урон от текущего HP + пауза iframe — реализовано
+
+- Столкновение: **25% от текущего** адреналина (не от max); `collisionDamage` 30→25.
+- Пассивный дренаж **останавливается** на время hit-iframe (~0.8 с).
+- Low-HP множитель (×1.5 при ≤28%) **пока оставлен** — ждём решения после playtest.
+- Файлы: `adrenalineHealth.ts`, `game.default.json`, `fallbacks.ts`, тесты.
+- Проверки: typecheck ✓, unit 293/293 ✓.
+
+### [2026-08-23] — Adrenaline: урон столкновения — принято
+
+- `collisionDamage` 36→30 (−17%); при низком HP: 45% вместо 54%.
+- Файлы: `game.default.json`, `fallbacks.ts`.
+
+### [2026-08-23] — Adrenaline: мягкий старт + idle — принято
+
+- Старт трека: `drainRampSeconds` 50, `drainStartScale` 0.52 — дренаж растёт к полному за ~50 с.
+- База: `passiveDrainPerSecond` 4.5; idle после **2 с** на полосе ×1.32 до перестроения.
+- Монеты: `gainCoin` 1.2→1.65.
+- Файлы: `adrenalineHealth.ts`, `schemas.ts`, `game.default.json`, `fallbacks.ts`.
+- Проверки: typecheck ✓, unit 291/291 ✓.
+
+### [2026-08-23] — Adrenaline: тюнинг напряжения — принято
+
+- Простой: `passiveDrainPerSecond` 4.2→5, `idleLaneSeconds` 2.5→2, `idleLaneDrainBonus` 2.15→2.85 (~14%/с на одной полосе).
+- Монеты: `gainCoin` 2.8→1.2.
+- Near miss: `gainNearMiss` 0, логика в Adrenaline пропускается.
+- Файлы: `game.default.json`, `fallbacks.ts`, `GameSim.ts`.
+- Проверки: typecheck + test после правок.
+
+### [2026-08-23] — Режим Adrenaline (gameplay) — реализовано
+
+- Глобальный режим `classic` | `adrenaline` на весь забег; select **`mode`** рядом с `gen`, localStorage, restart при смене.
+- Adrenaline: шкала 0–100%, game over при **0%**; пассивный дренаж + бонус на idle lane; столкновение −36% (×1.5 при HP ≤28%); `damageState` синхронизирован для flash/HUD.
+- Источники прилива: smash, монеты, horse clear, nitro burst; **near miss** — соседняя полоса + `nearMissMaxZ: -0.5`, +3.5% за событие (без требования nitro).
+- Ракета: `rocketDrainMultiplier: 1` (дренаж не замедляется); компенсация монетами в levelgen.
+- UI: полоска **ADREN** в HUD (скрыта в Classic).
+- Файлы: `adrenalineHealth.ts`, `gameplayRules.ts`, `PlayerSim.ts`, `GameSim.ts`, `game.default.json`, `AudioControls.ts`, `bootstrap.ts`, `HUD.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **290/290** ✓.
+
+### [2026-08-22] — Пресет Mega Traffic (levelgen) — реализовано
+
+- Новый отдельный car-only пресет `mega-traffic` («Mega Traffic»): максимальный контраст фаз 2–3 чанка и волн 5–8.
+- Структура: stream/weave 0.29/0.30, `stickiness 0.90`, `streamDensity 0.87`, `weaveDensity 1.16`, `weaveMulti +0.24`.
+- Передышка: `breather 0.21`, `densityScale 0.50`, `obstacleWeight 0.62`, late penalty −0.04 — лёгкий трафик сохраняется до конца.
+- Нитро: tease 0.20, multiplier 2.0, coin multiplier 1.35, ready/mandatory 0.18/0.16, cooldown 5.
+- Risk/награды: `riskZone 1.9/3.25`, guide 0.58, riskChoice 0.46, coins 0.36; nitro rows 0.42/0.46.
+- Late-game: peak 0.96, weave/nitro +0.18/+0.16, density/multi +0.065/+0.045, delay 28 с / ramp 180 с.
+- Horse, production/default, прежние пресеты и gameplay-код не менялись.
+- Файлы: `configs/levelgen/presets/mega-traffic/{car-phases,balance}.json`; регистрация в `src/core/config/levelgenPresets.ts`.
+- Проверки: typecheck ✓, lint ✓, unit 286/286 ✓ (isPassable по всем пресетам).
+
+### [2026-08-22] — Пресет Ultimate Traffic (levelgen) — реализовано
+
+- Новый пресет `ultimate-traffic` («Ultimate Traffic»): максимумы Ox/Grok/GPT-5/Curated без просадки по 9 акцентам.
+- Car-only: фазы 2–3, stream/weave 0.30/0.30, `stickiness 0.88`, `streamDensity 0.90`, `weaveDensity 1.14`, `weaveMulti +0.22`.
+- Передышка: `breather 0.20`, `densityScale 0.60`, `obstacleWeight 0.74`; late penalty −0.06 (паузы не умирают).
+- Нитро: tease 0.20, multiplier 1.85, ready 0.17, mandatory 0.15, cooldown 5.
+- Risk/монеты: `riskZone 1.85/3.1`, guide 0.56, riskChoice 0.44, coins 0.35.
+- Late-game: wave peak 0.92, density +0.06 / multi +0.038, delay 30 с / ramp 200 с; weave/nitro long-run +0.16/+0.14.
+- Файлы: `configs/levelgen/presets/ultimate-traffic/{car-phases,balance}.json`; регистрация в `levelgenPresets.ts`.
+- Horse / production / default не тронуты.
+- Проверки: typecheck ✓, unit 286/286 ✓.
+
+### [2026-08-22] — Пресет Curated Traffic (levelgen) — реализовано
+
+- Гибрид лучших настроек ox-alpha + grok-traffic + gpt-5-traffic: `curated-traffic` в select `gen`.
+- Файлы: `configs/levelgen/presets/curated-traffic/{car-phases,balance}.json`.
+- Проверки: typecheck ✓, unit 286/286 ✓.
+
+### [2026-08-22] — Пресет GPT-5 Traffic (levelgen) — реализовано
+
+- Новый car-only пресет `gpt-5-traffic` («GPT-5 Traffic»): структурные фазы 2–3 чанка и волны 5–7 чанков; stream/weave 0.29/0.31.
+- Передышка: `breather 0.21`, `densityScale 0.56`, `obstacleWeightScale 0.66` — лёгкий трафик без пустой дороги.
+- Нитро: `nitroTease 0.19`, `readyChallengeMultiplier 1.7`, `nitroReadyChallengeProbability 0.16`; risk/reward: `riskChoice 0.43`, `riskZone 1.7/2.7`.
+- Long-run: `waveIntensityPeak 0.82`, weave +0.14, nitro +0.13, breather −0.06; максимальные бонусы плотности/двойных препятствий 0.055/0.035.
+- Horse, production/default и gameplay-системы не менялись.
+- Файлы: `configs/levelgen/presets/gpt-5-traffic/{car-phases,balance}.json`; регистрация в `src/core/config/levelgenPresets.ts`.
+- Проверки: typecheck ✓, lint ✓, unit 286/286 ✓ (passability по всем пресетам).
+
+### [2026-08-22] — Пресет Grok Traffic (levelgen) — реализовано
+
+- Новый пресет `grok-traffic` («Grok Traffic»): car-only, фазы включены; stream/weave 0.30/0.30, короткие фазы 2–3 чанка, `streamLaneStickiness 0.86`.
+- Передышка: `breather 0.20`, `densityScale 0.58`, `obstacleWeightScale 0.72` (лёгкий трафик, не пустая дорога).
+- Нитро: `nitroTease 0.20`, `readyChallengeMultiplier 1.7`, `nitroReadyChallengeProbability 0.16`.
+- Волны (вариант C): 5–8 чанков, `waveIntensityPeak 0.90`; long-run как ST (weave +0.14, nitro +0.12, breather −0.10).
+- Risk/reward: `obstacleGuide 0.55`, `riskChoice 0.42`; `empty 0.01`. Horse / production / default не тронуты.
+- Файлы: `configs/levelgen/presets/grok-traffic/{car-phases,balance}.json`; регистрация в `src/core/config/levelgenPresets.ts`.
+- Проверки: typecheck ✓, unit 286/286 ✓ (passability по всем пресетам).
+
+### [2026-08-22] — Пресет Ox Alpha (levelgen) — реализовано
+
+- Новый пресет `ox-alpha` («Ox Alpha»): независимый профиль car — stream/weave 50/50 (0.30/0.30), breather 0.21 (`densityScale 0.55`, `obstacleWeightScale 0.7`), nitroTease 0.19 (`readyChallengeMultiplier 1.7`, `coinFrequencyMultiplier 1.2`).
+- Волны: `waveIntensityPeak 0.85`, 4–8 чанков; long-run: weaveBonus 0.16, nitroTeaseBonus 0.14, breatherPenalty 0.12.
+- Risk/reward: `riskZone {obstacleWeight 1.8, coinWeight 3.0}`, `riskChoiceProbability 0.42`, `twoObstacleBias 0.55`, `nitroReadyChallengeProbability 0.15`.
+- Файлы: `configs/levelgen/presets/ox-alpha/{car-phases,balance}.json`; регистрация в `src/core/config/levelgenPresets.ts`.
+- Horse не тронут; production/default не менялись.
+- Проверки: typecheck ✓, unit 286/286 ✓ (passability по всем пресетам).
+
+### [2026-08-22] — Car phase levelgen + multi-file presets — реализовано
+
+- `levelgen.car`: фазы stream/weave/breather/nitroTease, волны + long-run (вариант C); `phasesEnabled: false` в production.
+- Пресет `structured-traffic`: папка с `car-phases.json` + `balance.json`, merge слоёв в `levelgenPresets.ts`.
+- `CarPhasePlanner`, тесты passability + unit.
+- Проверки: typecheck ✓, unit 286/286 ✓.
+
+### [2026-08-22] — Levelgen presets infrastructure — реализовано
+
+- Пресеты генератора: `configs/levelgen/presets/`, merge поверх default, реестр `levelgenPresets.ts`.
+- UI: select `gen` рядом с видео → смена пресета → restart забега; выбор в `localStorage`.
+- Production = текущий `levelgen.default.json` (пустой override).
+- `GameSim.applyLevelgen()`, тест passability на каждый пресет.
+- Проверки: typecheck ✓, unit 283/283 ✓.
+
+### [2026-08-21] — Rocket launch arc camera + nose pitch — реализовано
+
+- Зарядка/взлёт: камера чуть смотрит вверх (`launchArcCameraLookLift` 1.35), нос ракеты по траектории (`launchArcNosePitch` 0.22 rad).
+- Проверки: typecheck ✓, unit 280/280 ✓.
+
+### [2026-08-21] — Rocket NFS-style turbo launch — реализовано
+
+- Rocket charge: дуга подъёма (`anticipationClimbFraction` 0.34), FOV dip −7°; выход из ракеты без turbo/vignette на fall.
+- Snap: полный ×3 boost, FOV +18, боковая tunnel-виньетка (пик 1 с → sustain до fall).
+
+### [2026-08-21] — Horizon video nitro swell — реализовано
+
+- Nitro (car/horse overdrive/rocket): scale ~1.86×, +17 Y, curve +11.5, dome +7.
+- Высокая скорость: отдельный слой (scale ~1.26×, слабее); при nitro speed-слой приглушается.
+- Двойная деформация: горизонтальный curve + вертикальный dome в shader.
+
+### [2026-08-21] — Polish: horizon video, difficulty ramp, horse density — реализовано
+
+- Видео: +30% размер, Y 17, лёгкий bowl-curve; подъём на ramp-прыжке car (+6 Y, sin ease).
+- longRunDifficulty: delay 36s, ramp 220s (пик сложности раньше).
+- Конь: action chunks чаще (0.84), rest реже (0.05), старт группы ближе (gap 2/8 z).
+
+### [2026-08-21] — Polish: ramp visual + horse path coins — реализовано
+
+- Трамплин: ниже mesh (~2.15), яркость снижена после первого тюна (emissive ~1.85/2.5).
+- Конь: больше монет-путей — ↑ jump/slide/ground/restCoin; trail на free lane (jump/slide/dodge).
+
+### [2026-08-21] — Fix: rocket coin VFX, horse↔car visuals, ramp guides — реализовано
+
+- Coin pickup VFX: абсолютная world-Y (ракета); spark на высоте игрока.
+- Horse visuals только при `mode=horse` (обратный переход в car сразу убирает стрелки/скругления).
+- Ракета: видео +7.5 по Y; монеты-гайды на подходе к ramp перед red wall.
+
+### [2026-08-21] — Polish batch: video, crush, horse, rocket, lane — реализовано
+
+- Горизонт-видео выше; в ракете поднимается ещё (+4.5) и возвращается после выхода.
+- Crush overlap: ramp > tall > low; `crushBroken` + VFX; `entityCrush.ts`.
+- Конь: нет авто-прыжка с поезда без буфера; прыжок на крыше сохранён.
+- Ракета: сильнее затемнение объектов на дороге.
+- Lane stickiness: coin pull после 5.5с на полосе; risk/guide coins ↑.
+- longRun delay 48s / ramp 280s; solo поезд `soloLengthScale` 0.72.
+- Horse arrows/rounded на всех объектах сразу при mode=horse (render).
+
+### [2026-08-21] — Playtest: recovery telemetry — реализовано
+
+- События `recovery_step`, `hit_while_damaged`; summary: `recoverySteps`, `hitsWhileDamaged`, `woundedSeconds`.
+- Report: секция Recovery в `analyze-playtest.mjs`.
+
+### [2026-08-21] — Levelgen: меньше dead-end на длинных треках — реализовано
+
+- `twoObstacleBias` 0.58 → 0.50; `longRunDifficulty.maxDensityBonus` 0.07 → 0.045; `maxMultiObstacleBiasBonus` 0.05 → 0.02.
+- `densityRange[0]` не трогали (отложено).
+- По playtest-report: 3 unpassable на Arctic Monkeys.
+
+### [2026-08-21] — Playtest session logging — реализовано
+
+- Кнопка **LOG** в AudioControls; arm → запись с начала забега; auto-save при death/song_end/manual stop.
+- Формат `.playtest.json`: track meta (`searchQuery` для ИИ), summary, events (cap 500), `passable` на hit.
+- `scripts/analyze-playtest.mjs` → compact `report.md`; docs: `docs/playtest-logging.md`.
+- Core: `@core/playtest/*`, hooks в `GameSim`; train hits в `runStats.hits`.
+
+### [2026-08-21] — UPDATE 1 шаги 0–15 приняты — зафиксировано
+
+- По решению пользователя: весь scope UPDATE 1 (0–15) считается **реализованным и принятым**.
+- Следующий этап: системная полировка на playtest-данных (session logging — обсуждение).
+- Docs: `status.md`, `update1-plan.md` §2.
+
+### [2026-08-21] — UI defaults + поезд/конь/монеты polish — реализовано
+
+- Видео «горизонт» по умолчанию; EventTimeline скрыт (T — показать).
+- Посадка на поезд: плавная дуга + lane guide (`trainLandingEngageStart`); companion короче (`companionDurationScale` 0.62).
+- Конь на поезде: прыжок/подкат; chain jump при спрыгивании; монеты выше + `coinCollectGrace`.
+- Портал horse→car: без ломания препятствий, `carPortalSafeSeconds` без дамага.
+- Мелкий VFX при сборе монет (fragments).
+- Проверки: unit **277/277** ✓.
+
+### [2026-08-21] — Видео: превью / горизонт (отладка) — реализовано
+
+- Галочка «горизонт» в AudioControls: preview (180px) vs plane в Three.js на z≈86 с мягким gradient alpha.
+- Без видео — прежний фон; режим 1 без изменений.
+- Файлы: `horizonVideoMaterial.ts`, `GameScene.ts`, `VideoFileAudioSource.ts`, `AudioControls.ts`, `videoDisplay.ts`.
+- Проверки: typecheck ✓, unit **277/277** ✓.
+
+### [2026-08-21] — Ракета: непрерывные монеты + shockwave — реализовано
+
+- Монеты: z по `rocketDistanceAtTime` (совпадает с кривой ускорения); поток без пауз; конец за 0.75с до падения.
+- Переходы полос: резкий snap на центр дорожки, без blend-монет посередине.
+- Подбор: `rocketBoostPulse`, pulse/strongPulse, shake, fragments, FOV-kick; launch fx стартует с 0.35.
+- Конфиг: `coinSpacingSeconds` 0.07, `coinEndBufferSeconds`, `pickupPulseSeconds`; убран `transitionCoinsPerSwitch`.
+- Проверки: unit **277/277** ✓.
+
+### [2026-08-21] — Ракета: пирамида + ping-pong монеты — реализовано
+
+- Форма: `ConeGeometry` 4 грани (пирамида), остриё вперёд; без вытянутого scale.
+- Монеты: с t≈0 вдоль взлёта/plateau/cruise; одна полоса за раз; ping-pong 0↔1↔2↔3; cap z ≤ flightDuration×speed.
+- Скорость: speedBoost 3.0, maxSpeed 52; switchTimeSeconds 0.2; смена полосы только после выравнивания laneX.
+- Конфиг: `coinSpacingSeconds`, `coinsPerLaneSegment` вместо sectionCount/coinsPerSection.
+- Ключевые файлы: `rocket.ts`, `GameSim.ts`, `PlayerSim.ts`, `GameScene.ts`.
+- Проверки: unit **275/275** ✓.
+
+### [2026-08-21] — Ракета feel + car purple + конус — реализовано
+
+- Скорость: speedBoost 3.5, maxSpeed 56; полёт короче (fuel 7s, launch 1.7s, plateau 0.85s).
+- Монеты: 10×10 секций + 6 переходных между полосами; `rocketCoinX` для диагоналей.
+- Затемнение дороги под ракетой; car-палитра — тёмно-фиолетовая.
+- Конус: принудительная смена shape при mode switch + вытянутый scale.
+- Проверки: unit **275/275** ✓.
+
+### [2026-08-21] — Портал horse→car без мгновенного дамага — реализовано
+
+- Превращение после выхода из портала (весь тоннель или уход на соседнюю полосу), не при первом сегменте.
+- `pendingCarPortalGroupId` + `modePortal` на всю action-группу.
+- Ключевые файлы: `GameSim.ts`, `horse.test.ts`.
+- Проверки: unit **274/274** ✓.
+
+### [2026-08-21] — Ракета: подняты шансы спавна — реализовано
+
+- Баг: `minModeSwitchSeconds` смотрел на `modeSwitchElapsed`, который сбрасывается при car↔horse (~25 с) — ракета почти не появлялась.
+- Отдельный `rocketOfferElapsed` (не сбрасывается при смене car/horse).
+- Шансы: ramp 50%, jump 42%; окно 18–34 с; до 2 подборов/песню; cooldown 14 с.
+- Проверки: typecheck ✓, lint ✓, unit **273/273** ✓.
+
+### [2026-08-21] — Ракета v2: воздушный спавн + 4 полосы + дуга — реализовано
+
+- Спавн только в двух случаях: сфера на трамплине (car, если не выпал конь) и бонус над low-группой в прыжке коня (если не выпал car-куб).
+- Ракета реже car↔horse: `minModeSwitchSeconds` 52, шансы 16%/12%, `maxPickupsPerSong: 1`.
+- Полёт: 4 горизонтальные полосы как у car/horse; дуга вверх → plateau → cruise по топливу → падение; lane сохраняется с места подбора.
+- Убран дорожный спавн по Director/difficulty; монеты и пунктир на `peakHeight`.
+- Ключевые файлы: `GameSim.ts`, `PlayerSim.ts`, `rocket.ts`, `GameScene.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **273/273** ✓.
+
+### [2026-08-21] — Ракета: 6 playtest-доработок — реализовано
+
+- Спавн ракеты не раньше `horse.firstHorseMinSeconds` (30 с).
+- Pending rocket больше не блокирует коня/машину (`hasPendingReciprocalModeBonus` vs `hasPendingRocketBonus`).
+- LevelGen остаётся в car/horse во время полёта — препятствия дороги продолжают спавниться.
+- Монеты: секции на весь `fuelSeconds` (8×5, gap 6%), убран `coinTrailSpread`.
+- Рендер: полупрозрачный пунктир на 4 рельсах ракеты (`GameScene`).
+- Ключевые файлы: `GameSim.ts`, `rocket.ts`, `GameScene.ts`, `configs/game.default.json`, `schemas.ts`.
+- Проверки: typecheck ✓, lint ✓, unit **282/282** ✓.
+
+### [2026-08-20] — Ракета feel-pass (взлёт/падение/частота) — реализовано
+
+- Спавн для теста: `firstRocketMinSeconds: 0`, `spawnCooldownSeconds: 0.55`, `requirePeak: false`.
+- Взлёт ~2.45 с: плавный подъём (easeOutCubic) и позднее дикое ускорение (easeInQuart + train-FX); круиз ~11 с.
+- Приземление: топливо кончилось → fall, гипер-FX гаснут за ~0.18 с, персонаж падает с неба (fallGravity 18).
+- Движение: с крайней левой вверх → верх-центр; с нижнего центра влево → середина-влево (blend по X/Y).
+- Остальные unit-тесты изолированы через `withoutRocketSpawn`.
+- Ключевые файлы: `PlayerSim.ts`, `rocket.ts`, `GameScene.ts`, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit **276/276** ✓.
+
+
+> Архив детальных записей по вехам, playtest-итерациям и тюнингу.
+> **Не читать целиком при старте сессии** — только `status.md`.
+> Добавлять сюда новые записи после принятия итерации; в `status.md` обновлять только HANDOFF и краткие блоки.
+
+
+### [2026-08-20] — Шаги 12–13: ракета и монетные траектории — реализовано
+
+- Цикл ракеты: спавн после peak/intense на входе в calm/cooldown (Director, не рандом), добровольный подбор на одной полосе, топливо 3.5 с без HUD, 5 позиций плюсом со сменой через центр, полёт без коллизий с дорогой.
+- Возврат в предыдущую форму (car/horse): нитро/здоровье/комбо сохранены, скорость как до активации, полоса по последней горизонтали + короткий коридор.
+- Сразу 4 монетных узора (линия/дуга/змейка/диагональ). Пирамида вершиной вперёд, высокая камера, дешёвая палитра/след.
+- Отладка: `rocket.spawnCooldownSeconds` 12, `firstRocketMinSeconds` 8 (цель 1–2/песню — поднять кулдаун по playtest).
+- Ключевые файлы: `src/core/gameplay/rocket.ts`, PlayerSim, GameSim, Collision, InputContext, LevelGenerator, GameScene, `configs/game.default.json`.
+- Проверки: typecheck ✓, lint ✓, unit 275/275 ✓.
+
+
+
+### 2026-08-21 — Ракета: спавн-спасение, ближе рельсы, секции монет — реализовано
+
+- Спавн в buildUp/intense при угрозе впереди; max 2 подбора/песню; 1 retry после пропуска, без спама.
+- railSpread 0.68; монеты секциями по одной дорожке; камера наклоняется противоположно повороту.
+- Unit 279/279 OK.
+### 2026-08-20 — Ракета: feel-pass (конус, камера, монеты, взлёт) — реализовано
+
+- Конус смотрит вперёд без вращения; камера выше (YOffset 2.2); наклон камеры влево/вправо на боковых рельсах.
+- Монеты: 12 на паттерн, coinTrailSpread 0.42, смена рельса каждую монету — плотная тропинка.
+- Неуязвимость на фазе launch. Unit 279/279 OK.
+### 2026-08-20 � ����� ������� ���� (���� �) � �����������
+
+- Down � ������: fast-fall + ����� ������� (���� `jumpBufferSeconds`); �� ����������� ������ �������� ���.
+- ��������� ������������ ������ � ������� ��������� (jump/nitro vs fastFall); ����� ������������ ��� ����� � ����� ������.
+- �����: `PlayerSim.ts`, `InputContext.ts`; ����� � `horse.test.ts`.
+- ��������: typecheck ?, lint ?, unit 259/259 ?.
+
+### 2026-08-20 — Ракета: 4 рельса, монеты на путях, камера ниже — реализовано
+
+- Только 4 позиции (верх/низ/лево/право), без центра; противоположная стрелка — на другой край; старт на up.
+- Монеты ракеты: coin.x + rocketPoseX/Y на 4 рельсах; паттерны line/arc/snake/diagonal без промежуточных точек.
+- cameraYOffset 5.2 -> 1.0. Файлы: rocket.ts, PlayerSim, GameSim, Collision, GameScene, types.ts.
+- Проверки: typecheck OK, lint OK, unit 277/277 OK.
+_Перенесено из прежнего `status.md` (2026-08-19)._
+
+### 2026-08-20 — Ракета: контракт шага 12 (+13) зафиксирован до кода
+
+- Появление: после peak, спокойная фаза; пропуск добровольный.
+- Управление: 5 позиций, ход через центр. Топливо ~3–4 с. Возврат по последней горизонтали.
+- Спавн: цель 1–2 с кулдауном, на отладку чаще. Узоры монет шага 13 в этой же итерации.
+
+### 2026-08-20 — Шаги 10 и 11 UPDATE 1 — принято (закрыты документами)
+
+- Шаг 10 закрыт без отдельной итерации: мастерство коня покрыто шкалой / Overdrive (V22), отдельное комбо «прыжок+landing» не делаем.
+- Шаг 11 закрыт: контракт сохранения скорости/нитро/здоровья/комбо и полировка переходов А–В.
+- Следующее: шаг 12 (ракета).
+- Docs: status.md, update1-plan.md §2, update1-design.md §4.
+
+### 2026-08-20 — Полировка А–В (монеты, приземление, буфер подката, конь, переход) — принято
+
+- Пользователь принял этап В и предыдущие А–Б.
+- В `agents.md` и правиле курсора: ответ на русском, внутренние рассуждения на родном языке модели.
+
+### 2026-08-20 — Этап В: разнообразие коня и твёрдый переход в машину — реализовано
+
+- Миксер жестов коня: не три одинаковых чанка подряд, чаще увороты и связки прыжок→подкат/уворот и подкат→уворот.
+- В окне возможного перехода в машину подкат всегда с плечевой полосой; кемп плеча бьёт высоким уворотом. Сплошной подкат впереди блокирует оффер куба/ворот.
+- После horse→car leftover-подкаты больше не призраки: можно врезаться или увернуться.
+- Проверки: typecheck ✓, lint ✓, unit 263/263 ✓.
+
+### 2026-08-20 — Прыжковые монеты коня не отстают от барьеров — реализовано
+
+- Монета над прыжковым барьером привязана к его позиции (и к той же группе потока), больше не разъезжается из-за разной скорости полосы.
+- Проверки: typecheck ✓, lint ✓, unit 256/256 ✓.
+
+### 2026-08-20 — Монеты: не лопаются на спавне — реализовано
+
+- Земные монеты едут с той же скоростью полосы, что и препятствия — больше не врезаются из-за разного потока.
+- Спавн: монета не ставится в ту же клетку, что объект; прыжковые монеты над низкими остаются.
+- Взрыв: поезд сбивает сразу; обычный объект — только если монета сначала была свободна, а потом её догнали. Очков нет.
+- Проверки: typecheck ✓, lint ✓, unit 255/255 ✓.
+
+### 2026-08-20 — Этап А: честные коллизии машины — реализовано
+
+- Приземление с рампы: машина больше не неуязвима в фазе посадки; удар и пролом с первого кадра (для коллизий высота как на земле).
+- Монеты, пересекающиеся с препятствиями или поездом, уничтожаются без начисления очков и комбо; монеты на крыше поезда не трогаем.
+- Лёгкий взрыв осколками при крошении; тихий splice поездом убран.
+- Ключевые файлы: Collision.ts, GameSim.ts, GameScene.ts.
+- Проверки: typecheck ✓, lint ✓, unit 252/252 ✓.
+
+### 2026-08-19 — Оптимизация документации для токенов — принято
+
+- `status.md` сжат до HANDOFF (~56 строк); история перенесена в `changelog.md`.
+- `agents.md`: маршрутизация чтения, протокол автообновления docs, матрица выбора модели.
+- `.cursor/rules/music-director-runner.mdc`: краткие обязанности агента по docs и модели.
+
+---
+
+
+## Дата последнего обновления
+
+2026-08-18
+
+## Текущая веха
+
+**План S0→M4 — ЗАВЕРШЁН (M4 принята после исправления реплея).**
+
+Далее — feel-обновления поверх текущих механик (не входят в исходный план):
+
+### Итерация «Здоровье/прощение + бит-пульс» — реализована (ожидает playtest-приёмки)
+
+- **Модель здоровья (Wish 1a)**: 1-й удар → i-frames 1с + ранение (`isWounded`, таймер 4с); удар в окне ранения → game over; дожил → восстановление. Без штрафа за удар. Логика — в `PlayerSim.registerHit()`, решение `GameSim.fixedUpdate`.
+- **Рассыпание объекта**: ударное препятствие → `broken`, пропускается коллизиями и перцепцией, в `GameScene` за 0.4с схлопывается (скейл→0 + крен + опускание).
+- **Фидбек**: куб краснеет при ранении (lerp), зелёная подсветка при восстановлении, лёгкая тряска камеры на удар (передний фронт `isHit`).
+- **Хитбокс-прощение (Wish 1b, умеренно)**: `hit.zGrace: 0.3`, `hit.heightGrace: 0.25` — прощает «впритык» по глубине и чуть недотянутый прыжок через низкое.
+- **Бит-пульс (Wish 2, референс Hi-Fi Rush)**: `GameSnapshot.pulse` (0..1) из `music.beat` с затуханием; пульсируют фон/туман (яркость), ambient light, emissive и маленький scale объектов+монет, emissive полосок дороги; плюс медленный hue-сдвиг объектов по энергии/фазе. «Без перебора»: единый источник, только затухание, амплитуды в конфиге `game.pulse`.
+- **Статус здоровья** — в оверлее (F3): строка `wound ok|Xs` и `pulse`.
+- **Тесты**: unit 68/68 (новые: forgiveness.test.ts — grace/broken/раненая модель/пульс).
+
+### Тюнинг по playtest-фидбеку (ожидает повторного playtest)
+
+Пользователь: небо пульсирует слишком часто и «укачивает»; обычные биты должны давать полоски дороги + заметный баунс объектов; игра быстрее разгоняется сама; скорость/FOV заметнее реагируют на музыку.
+
+- **Небо — только на самые мощные биты**: добавлен отдельный `strongPulse` (`GameSnapshot.strongPulse`) — ставится в 1 только если бит попал на высокую энергию (порог `pulse.strongBeatEnergyThreshold: 0.65`), иначе затухает. Фон/туман теперь пульсируют от `strongPulse`, а не от каждого бита. Обычный `pulse` по-прежнему на каждый бит → полоски, объекты, ambient.
+- **Обычные биты заметнее**: `pulse.channels.dashesEmissive` 0.3→0.5, `objectsScale` 0.06→0.12, `objectsEmissive` 0.35→0.45, `ambient` 0.22→0.3.
+- **Самоускорение**: `speeds.rampPerSecond` 0.12→0.2, `max` 26→30.
+- **Связь музыка↔движение заметнее**: `director.music.speedEnergyInfluence` 0.6→1.0, `vfxEnergyInfluence` 0.7→1.0, `sectionEnergy.attackSeconds` 0.4→0.25; `camera.fovMax` 100→105.
+- **Тесты**: добавлены кейсы strongPulse (бит на высокой/низкой энергии) — unit 70/70.
+
+### Итерация «Нитро/спид-фил» — реализована (ожидает playtest-приёмки)
+
+По фидбеку: убрать смену цвета кубов в такт (избыточно); кубы чуть уже и баунс сильнее; монетки баунсят отдельно; восстановление жизни дольше; полоски сильнее на биты; размытие по бокам на скорости (с потолком); полоски скорости за персонажем; FOV-рывок + вибрация как нитро; турбо на активном эпизоде песни.
+
+- **Убрана смена цвета в такт**: удалён `pulse.colorShift` (и поля `tallBase/lowBase/coinBase`) — кубы и монеты стабильного цвета.
+- **Кубы уже + баунс**: `obstacle.width` 2.2→2.0 (только визуал, коллизии не менялись), `pulse.channels.objectsScale` 0.12→0.2.
+- **Баунс монеток отдельно**: новый канал `pulse.channels.coinsScale: 0.3` (схема+fallback+конфиг), в `GameScene.syncCoins`.
+- **Полоски дороги сильнее на биты**: `dashesEmissive` 0.5→0.85.
+- **Восстановление жизни**: `hit.woundSeconds` 4→8.
+- **Размытие по бокам (пост-процессинг)**: EffectComposer + RenderPass + кастомный шейдер радиального blur по краям (`three/examples/jsm/postprocessing`, без новых npm-пакетов). Интенсивность от `speedFactor = clamp01(speedNorm + turbo*0.5)` с потолком `postfx.blurMax`. Включается через `postfx.blurMax*blur* > postfx.BLUR_ACTIVATION (0.25)`, иначе прямой рендер (перф). Параметры: `blurMax 0.85, blurInner 0.5, blurOuter 1.0, samples 8`.
+- **FOV-kick + вибрация**: FOV `lerp(base, fovMax, clamp01(vfx*0.6 + turbo*0.3 + kick*kickStrength))`, где `kick` — от производной скорости; лёгкая вибрация камеры от `postfx.shakeSpeed*(speedNorm+turbo)`.
+- **Полоски скорости**: пул тонких emissive-штрихов позади игрока (длина/прозрачность от скорости+турбо) + `EdgesGeometry` по граням куба с аддитивным свечением (`edgeMaterial`).
+- **Турбо-ускорение**: блок `turbo` (порог энергии 0.75, sustain 1с, duration 4с, cooldown 10с, speedBoost 1.35) — энергия выше порога дольше sustain → турбо на 4с (множитель скорости + качок), затем кулдаун. `GameSnapshot.turbo` (0..1), в оверлее строка `turbo`.
+- **Тесты**: добавлены кейсы турбо (не активируется ниже порога, активация после sustained-энергии + буст скорости, деактивация по duration и cooldown) — unit 74/74.
+
+### Итерация «Виньетка вместо тумана + ветер-полоски + крен» — реализована (ожидает playtest-приёмки)
+
+По фидбеку: затемнение туманом на интенсивных фазах заменить на виньетку (безопаснее на будущее); размытие по бокам сделать заметнее, но только на интенсивных моментах; полоски скорости переделать в «струящийся ветер» (на свежем ускорении + высокой скорости, с нарастанием/затуханием); умеренно усилить баунс объектов и монет; добавить крен камеры при смене полосы.
+
+- **Виньетка вместо затемнения туманом**: туман ослаблен (`fog.near lerp(20,14,t)`, `fog.far lerp(95,72,t)` — не смыкается в плотную мглу на intense/peak). Общее затемнение кадра теперь — виньетка, но НЕ в пост-шейдере: CSS-overlay `radial-gradient` (z-index 5, поверх canvas, под HUD), прозрачность = `vigStrength * fx`. Это дёшево и не зависит от composer → работает всегда, в т.ч. в headless.
+- **fx-интенсивность**: `fx = clamp01(turbo*0.5 + vfx*0.6 + speedNorm*0.1)` — от фазы Director (intense/peak), турбо и скорости. Ведёт виньетку, свечение граней куба (`edgeMaterial`), ветер.
+- **Размытие (composer) только турбо+скорость**: `blurIntensity = blurMax * clamp01(turbo*0.7 + speedNorm*0.4)`; добавлен `uSpread` (`blurSpread: 0.22`) — сэмплы разбегаются дальше по краям. В headless блюр не активируется (турбо=0, скорость растёт медленно) → перф-тест стабилен (avg_frame 16.7ms).
+- **Ветер-полоски**: гейт `windMinSpeed: 0.4` (только на приличной скорости); `windPhase` прокручивается со скоростью игрока; полоски ставятся позади с фейдом по дистанции; длина/прозрачность от скорости. Пул `windCount: 8`.
+- **Крен камеры (banking)**: `bankTarget = (laneX - camX) * bankStrength * 2`, плавно сглаживается и добавляется к `camera.rotation.z` — при смене полосы камера слегка наклоняется.
+- **Баунс**: `objectsScale` 0.2→0.28, `coinsScale` 0.3→0.38.
+- **Параметры** (`postfx`): `blurInner 0.4`, `blurSpread 0.22`, `vigStrength 0.3`, `vigInner 0.45`, `windMinSpeed 0.4`, `windFadeRange 8`, `windCount 8`, `bankStrength 0.04`; `lineMaxLength 4.0`, `lineMaxAlpha 0.5`; `BLUR_ACTIVATION` 0.25→0.12.
+- **Тесты**: unit 74/74; e2e 2/2 (perf: avg_frame 16.7ms, draws 58).
+
+### Рестарт музыки при смерти — реализовано
+
+По фидбеку: после перезапуска уровня из-за смерти музыка должна начинаться с начала.
+
+- **`AudioClock`**: добавлен `restart()` — сдвигает baseline трека, чтобы `getTrackTime()` обнулялся (раньше рос от `ctx.currentTime`, который монотонный).
+- **`VideoFileAudioSource`**: добавлен `restart()` — `video.currentTime = 0` + play.
+- **`AudioWorkletAnalyzer`**: добавлен `restart()` — сброс `MusicStateBuilder` (адаптивные пороги энергии/бита/тишины заново).
+- **`AudioSession.restart()`**: resume → clock.restart → analyzer.restart → source.restart → playing=true.
+- **`bootstrap.ts`**: при рестарте после смерти (`sim.gameOver`) вызывается `audio.restart()`.
+- **Тесты**: unit 75/75 (новый кейс baseline в audioclock).
+
+### Видео в верхнем левом углу — реализовано
+
+По фидбеку: выбранное видео показывать в верхнем левом углу, среднего размера, чуть ниже верха, чтобы не заслоняло дебаг-меню.
+
+- **`VideoFileAudioSource`**: видео-элемент виден (`display:block` только после успешной загрузки файла), позиция `position:fixed;top:64px;left:16px;width:180px;z-index:6` — ниже HUD-счёта и ниже дебаг-меню (z-index 30 рисуется поверх, меню не перекрывается); `pointer-events:none` — не перехватывает клики.
+
+### Итерация «Уклоняться чаще, чем перепрыгивать» + гарантия проходимости — реализована (ожидает playtest-приёмки)
+
+По фидбеку: игроку нужно чаще уклоняться от препятствий, чем перепрыгивать их; добавить гарантию проходимости отрезков. Проверка проходимости — только unit-тесты, без рантайм-кода (по решению пользователя).
+
+- **Баланс в конфиг** (раньше константы `WALL_PROBABILITY 0.25` / `TALL_PROBABILITY 0.35` были захардкожены в `LevelGenerator.ts`): новые поля `levelgen` — `wallProbability 0.08` (стены реже; единственный источник вынужденных прыжков), `tallProbability 0.45` (чаще tall → только уклонение), `twoObstacleBias 0.65` (чаще 2 препятствия на ряд → уже коридор → больше смен полос), `minWallGapRows 3` (стены не ближе 3 рядов / 12 юнитов друг к другу). Схема + fallback + json обновлены синхронно; hot-reload работает без пересборки.
+- **`LevelGenerator`**: читает баланс из конфига; отслеживает `lastWallRow` (глобальный номер ряда) и пропускает стену, если она ближе `minWallGapRows` к предыдущей — вместо неё обычный ряд со свободной полосой (без циклов, детерминированно).
+- **`src/core/levelgen/passability.ts`**: чистая `isPassable(obstacles, config)` → `{passable, reason: ok|dead-end|tall-block|wall-gap}`. Проверяет: полные ряды = только `low` (стены перепрыгиваемы), расстояние между стенами ≥ `minWallGapRows`, достижимые полосы (±1 на ряд) не пустеют. **Вызывается только из unit-тестов.**
+- **Тесты** (`tests/unit/levelgen.test.ts`): прогон `isPassable` по 40 сидам × 300 чанков; разрыв между стенами ≥ `minWallGapRows` (1100 чанков при плотности 0.9); «уклонений больше, чем вынужденных прыжков» (500 чанков, прыжки >0 и < уклонений). Попутно найден и исправлен баг в `isPassable`: стена (полный ряд из low) трактовалась как блокирующая все полосы → ложный dead-end.
+
+### Проверки
+`npm run typecheck` ✓, `npm run lint` ✓, `npm run test` — 78/78 ✓, `npm run build` ✓, `npm run test:e2e` — 2/2 ✓ (perf: avg_frame 17.5ms, draws 52 — в бюджете).
+
+## UPDATE 1 — машина / конь / ракета (новое крупное обновление)
+
+Концепция и план итераций 0–15 — в `E:\Myprojects\Runner\update 1.txt`; наш план с решениями —
+в `docs/update1-plan.md`; дизайн систем — в `docs/update1-design.md`.
+Не переходим к новой вехе формально — доводим геймплей MVP до приличного состояния по одному
+шагу с приёмкой. Жёсткий порядок: машина (1–7) → конь (8–11) → ракета (12–14) → косметика (15).
+
+### Шаг 0 — Архитектурная подготовка — реализован (ожидает playtest-приёмки)
+
+Без изменения поведения геймплея: заложен слой, на который лягут режимы.
+
+- **Документы**: `docs/update1-plan.md` (план итераций 0–15, решения, сценарии тестов),
+  `docs/update1-design.md` (дизайн 13 систем: режимы, здоровье, бонусы, комбо, нитро, воздух,
+  рампы, второй уровень, профили LevelGen, InputContext, профили Director, камера, сохранение состояния).
+- **`src/core/modes/`**:
+  - `types.ts` — `PlayerMode = 'car' | 'horse' | 'rocket'`, `ModeProfile`, `MODE_PROFILES`
+    (фигуры: куб/шар/конус, ключи профилей LevelGen/Director/InputContext/камеры).
+  - `ModeController.ts` — текущий режим, `switchMode`, `reset`; контракт сохранения состояния
+    (`PRESERVED_ACROSS_MODES` = скорость/нитро/здоровье/дистанция/монеты;
+    `RESET_ON_MODE_CHANGE` = воздух/прыжок/комбо/трюки).
+  - `InputContext.ts` — `interpretInput(mode, actions)` (пока все режимы = car-поведение,
+    конь/ракета — заглушки для своих шагов).
+  - `bonus.ts` — `BonusPipeline` (acquired → activation → transition; авто-активация сейчас,
+    архитектура позволяет ручную позже).
+- **`src/core/gameplay/health.ts`** — логика здоровья вынесена из `PlayerSim` в чистый модуль
+  (2 состояния как сейчас, поведение 1-в-1; шаг 1 расширит до 3 + recovery).
+- **`PlayerState.mode`** (default 'car').
+- **`GameSim`**: владеет `ModeController`, `setMode()`, `mode`; инпут идёт через `interpretInput`.
+- **`GameScene`**: фигура персонажа по `player.mode` (куб/шар/конус), кромки-свечение только у куба.
+- **Демо**: dev-клавиша `M` — цикл по режимам (смена фигуры; управление пока car-овское, тост в UI);
+  в оверлее (F3) добавлена строка `mode`.
+- **Тесты**: unit 93/93 (+15: modes.test.ts — ModeController/InputContext/bonus; health.test.ts —
+  эквивалентность старой модели ранения). e2e 2/2 (perf: avg_frame 17.2ms, draws 52 — в бюджете).
+
+### Шаг 1 — Здоровье: 3 состояния + recovery — реализован и ПРИНЯТ по playtest
+
+По дизайну §2 (`docs/update1-design.md`): `NORMAL → DAMAGED → CRITICAL → GAME OVER`,
+recovery по таймеру на ступень, лёгкое снижение скорости на удар, визуал по состоянию.
+
+- **3 состояния вместо 2**: `damageState = 'normal' | 'damaged' | 'critical'` (вместо
+  `isWounded`/`woundTimer`). Удары по цепочке: normal→damaged→critical→game over.
+  Recovery: без новых попаданий каждые `hit.recoverySeconds` поднимается на ступень
+  (critical→damaged→normal). Новый удар во время recovery сбрасывает таймер и эскалирует.
+  Логика — чистый модуль `src/core/gameplay/health.ts` (`updateHealth`/`registerHit`/`beginHit`/`resetHealth`).
+- **Лёгкое замедление**: `hit.speedPenalty: 0.1` — множитель скорости действует, пока
+  здоровье не `normal` (т.е. на весь recovery-интервал), снимается автоматически при
+  возврате в норму. `registerHit()` больше не мутирует множитель скорости.
+- **Удар и неуязвимость**: `hit.iframeSeconds: 0.8`. Столкновение всегда разрушает
+  препятствие (`broken`); повреждение/эскалация — только вне i-frames, т.е. объекты,
+  задетые во время неуязвимости, тоже рассыпаются, но жизни не отнимают.
+- **Визуал** (`GameScene`): персонаж красится по `damageState` (normal синий / damaged
+  оранжевый / critical красный); CRITICAL — CSS-overlay красные края экрана пульсируют
+  (`critEl`, z-index 4); возврат в NORMAL — зелёный импульс по краям (`healFlash`).
+- **Оверлей (F3)**: строка `wound` заменена на `damage normal|damaged|critical + recoveryTimer`.
+- **Конфиг**: `game.hit.recoverySeconds: 6.0` (заменяет `woundSeconds`), `speedPenalty: 0.1`,
+  `iframeSeconds: 0.8`.
+  Схема + fallback + json синхронно.
+- **Тесты**: health.test.ts переписан (3 состояния, поступенчатый recovery, сброс таймера
+  новым ударом, i-frames при повреждении, timeSinceLastHit, reset); forgiveness.test.ts
+  обновлён (3 удара→game over, recovery→normal, i-frames, скорость после удара ниже и
+  возвращается к норме после recovery; препятствия, задетые в i-frames, рассыпаются без
+  эскалации урона). Проверки: typecheck/lint/test 96/96/build/e2e 2/2.
+
+### Диагностика затемнения на активной фазе — тумблеры VFX (F3)
+
+Инструмент поиска источника затемнения кадра на intense/peak (пользователь заметил «очень темно»
+на активной части; виньетка `vigStrength` 0.6→0.3 не была причиной — читается только при создании
+сцены, нужно F5).
+
+- **`src/app/fxSwitches.ts`** (новый): `FxSwitches` — 8 булевых флагов (`fog, sky, vignette, fov,
+  blur, shake, wind, pulse`), `createFxSwitches()` (все `true`). Общий изменяемый объект,
+  создаётся в bootstrap, передаётся в `GameScene` и `DebugOverlay`.
+- **`GameScene`**: необязательный 5-й параметр `switches` (default — все включены). `applyVfx`/
+  `update`/`updateSpeedLines` гейтят эффекты: `fog` off → near/far пины calm (20/95); `sky` off →
+  фон без lerp к `bgGlow` и без hue-сдвига; `pulse` off → без пульс-реакций (ambient/emissive/
+  scale/полоски); `fov` off → базовый FOV; `vignette` off → opacity 0; `blur` off →
+  `blurIntensity=0` (прямой рендер); `shake` off → без тряски/вибрации камеры; `wind` off →
+  полоски ветра скрыты. Добавлен `fxDiagnostics()` — живая строка `vfx fx fog near/far fogColor
+  bg fov turbo`.
+- **`DebugOverlay`**: панель чекбоксов «VFX toggles» (строится один раз, галочки пишут флаги в
+  `switches` — live, без перезагрузки) + строка `fx  …` из `fxDiagnostics()`.
+- **Проверки**: typecheck/lint/test 96/96/build/e2e 2/2.
+- **Использование**: F3 → в пике смотришь readout (`vfx=1.00 fog 14/72 fogColor #3a2a5e`) →
+  выключаешь по одной галочке, начиная с `fog` → источник найден.
+
+### Затемнение от blur — причина найдена, blur отключён
+
+Диагностика тумблерами показала: источник «очень тёмного» кадра на активной фазе — **blur**
+(радиальный смаз). Виньетка и туман тут ни при чём.
+
+- **Почему темнело**: blur включался почти всегда (порог `BLUR_ACTIVATION 0.12` при
+  `0.85·(turbo·0.7 + speedNorm·0.4)`), `uInner 0.4` → смаз с 40% радиуса; шейдер *заменял*
+  цвет пикселя усреднением сэмплов, уходящих за края текстуры (clamp к тёмному краю) и
+  затягивающих тёмный туман внутрь → весь кадр темнел.
+- **Попытка фикса шейдера** (`GameScene.ts` `buildRadialBlurShader`): выборки клампятся в
+  `[0,1]`, результат — `mix(original, blurred, …)`, плюс `blurInner` 0.4→0.65. **Не помогло**
+  (пользователь: «Не получилось исправить»).
+- **Решение: blur отключён** — `postfx.blurMax` 0.85→**0** (конфиг + fallback). `blurIntensity`
+  всегда 0 → composer не активируется, идёт прямой рендер. Тумблер `blur` в F3-оверлее остался
+  для диагностики; вернуть эффект — восстановить `blurMax` в конфиге. Схема позволяет (≥0).
+- **Проверки**: typecheck/lint/test 96/96/build/e2e 2/2.
+
+### Шаг 2 — Комбо (машина: серии уклонений) — реализован и ПРИНЯТ по playtest
+
+По дизайну §4 (`docs/update1-design.md`). Решения пользователя: прогрессивный множитель
+(`1 + floor(combo/5)`, 5→×2, 10→×3); комбо НЕ сбрасывается при смене режима (только при уроне);
+визуал — счётчик в HUD + рост свечения граней персонажа.
+
+- **`src/core/gameplay/Combo.ts`** (новый): `ComboConfig {threatDistance, multiplierStep,
+  multiplierPerStep}`, чистый `comboMultiplier(combo, cfg)`, `ComboSystem` (трекинг препятствий
+  в полосе игрока в окне `threatDistance: 30`, начисление уклонения, когда объект прошёл за
+  спину (`z <= -0.5`) неразрушенным; `broken` и чужие полосы не в счёт; перепрыгивание
+  засчитывается; `onHit()`/`reset()`).
+- **Удар сбрасывает комбо**: в `GameSim` при `!player.isHit` → `registerHit()` + `combo.onHit()`;
+  удар в i-frames (урон не эскалируется) комбо не трогает. `restart()` сбрасывает.
+- **`GameSim`**: владеет `ComboSystem`, `combo.update` после коллизии; снапшот несёт `combo`
+  и `comboMultiplier`; `score.update(..., comboMultiplier)` — монеты умножаются на множитель.
+- **`Score`**: `update(distance, coins, coinValue, comboMultiplier = 1)`. По решению пользователя
+  очки = **только монеты × цена × множитель комбо** (`total = coins·coinValue·comboMultiplier`);
+  дистанция очков не даёт, но показывается в HUD (`м`), `scoreMeters` остаётся для отображения.
+- **`PlayerState.combo`** (+ reset в `PlayerSim`).
+- **Визуал**: `GameScene` — свечение граней персонажа растёт с множителем (`comboGlow`,
+  `edgeMaterial.opacity`); HUD — `combo N` (+` xM` при множителе > 1); оверлей (F3) — строка `combo`.
+- **Конфиг**: `game.combo {threatDistance 30, multiplierStep 5, multiplierPerStep 1}` +
+  схема + fallback синхронно (hot-reload работает).
+- **Контракт режимов**: по решению пользователя комбо переходит в `PRESERVED_ACROSS_MODES`
+  (`ModeController`), убрано из `RESET_ON_MODE_CHANGE`; доки `update1-design.md` §1/§13 обновлены.
+- **Тесты**: unit 106/106 (+10: combo.test.ts — множитель, уклонения в полосе/чужая полоса/
+  broken/onHit/reset/Score; gameplay.test.ts — снапшот, рост комбо на сиде 1337, сброс на удар,
+  сброс после restart; modes.test.ts — контракт без combo в reset). Проверки:
+  typecheck/lint/test 106/106/build/e2e 2/2 (perf: avg_frame 17.2ms, draws 53).
+
+### Шаг 2.1 — Музыка → бонусы: размещение + сбор — реализован (ожидает playtest-приёмки)
+
+По дизайну §3/§11 (`docs/update1-design.md`). Решение пользователя: объём шага — ТОЛЬКО
+размещение и сбор бонусов; смена режима при подборе НЕ входит (шаги 8 для 🐎 и 12 для 🚀).
+Ракета 🚀 в этом шаге не размещается.
+
+- **Триггер**: Director вошёл в фазу `buildUp` (переход фазы, `prevPhase !== 'buildUp'`) →
+  `GameSim` размещает бонус 🐎 на `player.distance + levelgen.bonusLeadZ: 100`.
+- **Спавн напрямую в `GameSim`** (не через `LevelGenerator`): `spawnBonus()` кладёт `BonusEntity`
+  сразу в `sim.bonuses` — виден мгновенно и детерминированно (PRNG `mulberry32`, засеян от seed
+  `^ 0xb0a5`, полоса из свободных — не занятых препятствием в ±0.5 по z; при заполненных —
+  случайная из всех). Причина: через очередь в генераторе бонус ставился за горизонт генерации
+  (`segmentsAhead·chunkLength` ≈ 90 < `bonusLeadZ` 100) и никогда не появлялся — подход откачен.
+- **Кулдаун**: `levelgen.bonusMinGapZ: 60` — в единицах дистанции, тратится на `player.speed * dt`;
+  повторный вход в buildUp без выхода из фазы бонус не дублирует.
+- **Сбор**: `CollisionSystem.update` принимает 4-й аргумент `bonuses`, возвращает `bonusCollected`;
+  подбор помечает `collected: true`; `GameSim` кладёт `bonusPicked` в снапшот; `bootstrap.ts`
+  показывает тост `bonus: horse`.
+- **Рендер**: `GameScene` — розовый шар (сфера) на высоте `coinHeight`, `syncBonuses()` сверяет
+  снапшот и меши (скрывает собранные/невидимые), пул мешей.
+- **Рестарт** очищает `bonuses`, сбрасывает `bonusPicked`/`bonusCooldown`, пересоздаёт PRNG
+  бонусов (детерминированный реплей).
+- **Конфиг**: `levelgen.bonusLeadZ: 100`, `bonusMinGapZ: 60` + схема + fallback (hot-reload).
+- **Тесты**: unit 110/110 (+3 gameplay.test.ts — размещение на buildUp + движение к игроку,
+  без дубля в той же фазе, очистка при рестарте; бонус-подбор в CollisionSystem уже был; из
+  `levelgen.test.ts` удалены тесты на откаченный `placeBonus`). Проверки:
+  typecheck/lint/test 110/110/build/e2e 2/2 (perf: avg_frame 18.1ms, draws 53).
+
+### Шаг 3 — Трасса 4 полосы + зоны риск/безопасно — реализован (ожидает playtest-приёмки)
+
+По дизайну §9 (`docs/update1-design.md`). Решение пользователя: 2 риск-полосы слева
+(0–1), 2 безопасных справа (2–3); визуальная подсказка зон отложена в шаг 15.
+
+- **Конфиг**: `game.lane.positions` → `[-3.6, -1.2, 1.2, 3.6]`; `levelgen.lanes` → `4`;
+  новый `levelgen.riskZone {riskLaneCount 2, obstacleWeight 1.6, coinWeight 1.8}` +
+  схема + fallback синхронно (hot-reload).
+- **Представление полос — 0-based** (`lane ∈ 0..lanes-1`, `positions[lane]`) вместо
+  `-1|0|1` + `positions[lane+1]`: `PlayerState.lane: number`, `PlayerSim` (старт
+  `Math.floor(lanes/2)`, clamp `[0, lanes-1]`), `Collision.ts`, `GameScene`
+  (`addLaneStrips` на внутренних границах), `GameSim.pickBonusLane`, `passability`.
+- **Зоны в LevelGenerator**: монеты смещены в риск (`pickRiskBiasedLane`); блокируемые
+  полосы в ряду препятствий взвешены в риск (`pickBlockedLanes`), свободный путь —
+  от `constraintLane ± 1`. Стартовая полоса = 2 (право-центр).
+- **Фикс dead-end при 4 полосах**: `constraintLane` инициализируется `startLane()` и
+  НЕ сбрасывается на стенах (стена проходима) — непрерывность пути; `isPassable`
+  по 40 сидам × 300 чанков зелёный.
+- **Тесты**: обновлены lane-литералы на стартовую полосу (combo/gameplay/forgiveness/
+  config); `dodge`-AI в gameplay.test.ts стала «охотничьей» (догоняет препятствие);
+  в levelgen.test.ts циклы на `config.lanes` + **EV-тест** (2000 чанков: препятствия
+  риск > безопасных ×1.15, монеты > ×1.4; замер ~1.24× / ~1.70×). Проверки:
+  typecheck/lint/test 111/111/build/e2e 2/2 (perf: avg_frame 16.7ms, draws 59).
+
+### Шаг 4 — Нитро машины (реализован, ожидает playtest-приёмки)
+
+По дизайну §5 (`docs/update1-design.md`). Решения пользователя: клавиша нитро —
+**стрелка вверх** (прыжок на Space остаётся до шага 5, потом нитро уедет на Space);
+пролам — **все препятствия, кроме высоких (tall — монолиты)**; формулы сразу.
+
+- **Первоначальный конфиг шага 4** `game.nitro` + схема + fallback синхронно
+  (hot-reload): `maxFill 100`, `gainPerCoin 2`, `gainPerDodge 5`, пассивный заряд 4/с,
+  `drainPerSecond 25`, `graceSeconds 0.1`, `boostMax 0.6`. Актуальные награды и полосы
+  заряда после последующего тюнинга описаны в шаге 5.3.
+- **Ввод**: `PlayerAction`/`ConsumedInput` += `'nitro'`; `mergeActions` ловит
+  `'nitro'` явно (раньше всё не-лейн уходило в `else jump`); `InputAdapter` —
+  `ArrowUp → 'nitro'` (Space остался `jump`).
+- **Механика**: `src/core/gameplay/nitro.ts` (чистые `addNitroCharge`/
+  `drainNitroCharge`/`applyNitroBoost`); `PlayerSim` — `activateNitro()`,
+  `updateNitro(dt)` (грас 0.1с, drain, отключение при 0), `nitroBoostFactor()`
+  (буст к множителю скорости), reset очищает запас; `GameSim` — активация только
+  в `car`, накопление: монеты (+2), риск-полоса (`lane < riskLaneCount`, +4/с),
+  уклонение (+5 × множитель комбо после `comboSystem.update`); удар в активном
+  нитро по `low` → `obstacle.smashed = true` + `broken`, НЕ вызываем
+  `registerHit`/`comboSystem.onHit`; tall — обычная логика урона.
+- **Визуал**: `HUD` — шкала NITRO (прогресс-бар снизу по центру, скрыта вне car,
+  подсветка при активном, `nitroMaxFill` из снапшота); `GameScene` — lerp `nitro`
+  0..1 от `isAbilityActive`, cyan-эмиссия персонажа, edge-материал → cyan, FOV
+  `+ nitro·0.25`, `fx` `+ nitro·0.35`, вибрация; **фрагменты разлёта**
+  (`spawnFragments`/`updateFragments`/`addFragments` — пул 28 кубиков, спавн 8 при
+  `obstacle.smashed`, гравитация 14, life 0.4–0.7, spin, opacity, AdditiveBlending);
+  `syncObstacles` — при `smashed` меш скрыт, при `broken` обычный crumble.
+- **Оверлей (F3)**: строка `nitro N%` (`bootstrap.ts` передаёт процент).
+- **Тесты**: `nitro.test.ts` (+17; формулы, PlayerSim, GameSim: монеты/риск/уклонение,
+  пролам low/tall, не-car, restart); `inputbuffer.test.ts` обновлён под новый
+  `mergeActions`; существующие тесты — `nitro: false` в `ConsumedInput`-литералах.
+   Проверки: typecheck/lint/test 128/128/build/e2e 2/2 (perf: avg_frame 18.1ms,
+   draws 59 — в бюджете).
+- **Диагностика консольной ошибки `[config] invalid 'game', using fallback`**:
+  код НЕ виноват. Dev-сервер (5173), запущенный ДО добавления блока `nitro`,
+  отдавал закэшированный (старый) JSON-модуль без `nitro`, тогда как схема
+  (свежая) его требует → валидация падала. Свежий dev-сервер (5199) и
+  production-build отдают актуальный модуль → ошибки нет (проверено Playwright,
+  console clean). Решение: перезапустить dev-сервер + hard refresh (Ctrl+Shift+R).
+  Диагностические файлы (config-capture.spec.ts, pw-*.config.cjs) удалены.
+
+### Шаг 4.1 — Доработки нитро: активация, баланс, риск-зона слева, HUD — реализовано (ожидает playtest-приёмки)
+
+По фидбеку пользователя на шаг 4 (нитро).
+
+- **Активация только при 100% запасе**: `PlayerSim.activateNitro()` требует `nitroCharge >= maxFill`.
+  Зажимание клавиши заранее НЕ триггерит: `InputAdapter` игнорирует `e.repeat` для `nitro` (стрелка вверх) —
+  нужно отпустить и нажать снова после полной зарядки. Учтено в тестах (активация ниже полного запаса не проходит).
+- **Баланс набора**: монеты 2→3, уклонения 5→7, пассив риск-зоны 4→3/с (монеты — главный источник).
+- **HUD**: шкала приглушена (opacity 0.32) пока заполняется, пульсирует на 100%, яркая при активном нитро.
+- **Эффекты при активном нитро**: FOV-вес 0.25→0.4, голубая подсветка краёв экрана
+  (`nitroGlowEl` — CSS-overlay, z-index 5), ветер включается и усиливается от нитро (гейт, длина, фаза).
+- **Риск-зона переопределена на полосы 2–3** (видимая ЛЕВАЯ сторона; раньше «опасная» была видна справа):
+  `LevelGenerator` (startLane, `pickBlockedLanes`, `pickRiskBiasedLane` — зеркально: риск = последние
+  `riskLaneCount` полос, т.е. `lane >= lanes - riskLaneCount`), `GameSim` (проверка `lane >= riskLaneStart()`,
+  старт в безопасной полосе), `PlayerSim` (параметр `startLane`, дефолт — центр). Тесты риск-зоны
+  переведены на новое направление (laneLeft вместо laneRight).
+- **Монет на опасной стороне больше**: `levelgen.riskZone.coinWeight` 1.8→2.4.
+- **Проверки**: typecheck/lint/test 129/129/build/e2e 2/2.
+
+### Шаг 4.2 — Нитро: продление и ощущение скорости — реализовано (ожидает playtest-приёмки)
+
+По выбору пользователя из предложенных идей «как сделать механику нитро интереснее».
+
+- **Монеты продлевают**: во время нитро монета даёт `gainPerCoin × coinNitroMultiplier` (3→6) — заряд держится дольше.
+- **Снос продлевает**: за снос низкой преграды `+gainPerSmash` (3) (`GameSim` при `obstacle.smashed`).
+- **Близкий пролёт (near-miss)**: препятствие в соседней полосе прошло за спину (z ≤ −0.5) во время нитро →
+  `+gainPerNearMiss` (1); трекер `nearMissTracked` (Set), очистка на restart. Поощряет езду вплотную
+  (особенно на опасной стороне, где преграды гуще).
+- **Множитель очков**: монета, собранная во время нитро, даёт персистентный бонус
+  `(scoreMultiplier−1) × value` (`Score.addBonus`) — очки НЕ падают после окончания нитро.
+- **Ощущение скорости**: тряска камеры во время нитро умножается на `postfx.shakeNitroBoost` (3) —
+  стиль NFS ProStreet.
+- **Разлёт обломков ×3**: снесённые нитро преграды разлетаются в 3 раза мощнее (velocity/spin фрагментов
+  ×`FRAGMENT_SMASH_POWER = 3`).
+- **FOV и крен под нитро**: базовый `camera.fov` 65→55 (без нитро обзор уже), `fovMax` 105→110, нитро-вес
+  FOV 0.4→0.55 (веса vfx/turbo 0.45/0.25) — нитро даёт «нереальный» широкий FOV до 110; крен камеры при
+  смене полосы во время нитро усиливается ×(1 + nitro·`postfx.bankNitroBoost 2.5`).
+- **Новые тюнинги**: `game.nitro.{coinNitroMultiplier 2, gainPerSmash 3, gainPerNearMiss 1, scoreMultiplier 2}`,
+  `game.postfx.shakeNitroBoost 3`, `game.postfx.bankNitroBoost 2.5` — схема + fallback + json синхронно (hot-reload).
+- **Тесты**: +5 (монеты во время нитро ×множитель, снос продлевает, near-miss возвращает заряд,
+  score-бонус во время нитро). Проверки: typecheck/lint/test 133/133/build/e2e 2/2
+  (perf: avg_frame 17.2ms, draws 59 — в бюджете).
+
+### Шаг 4.3 — Тюнинг скорости, камеры и высоких препятствий — реализовано (ожидает playtest-приёмки)
+
+По фидбеку пользователя (комфорт и ощущение нитро).
+
+- **Минимальная скорость +30%**: `speeds.min` 4→5.2 (сдвиг вверх и базы скорости на медленных фазах).
+- **Разгон быстрее (умеренно)**: `speeds.accelPerSecond` 1.2→1.8 (скорость быстрее догоняет intent),
+  `speeds.rampPerSecond` 0.2→0.26 (естественный рост быстрее).
+- **Камера ниже при нитро**: `game.nitro.camYOffset -0.8` — при активном нитро камера опускается на 0.8,
+  при окончании возвращается (lerp по `this.nitro`).
+- **Меньше неломаемых высоких**: `levelgen.tallProbability` 0.45→0.3 (больше низких — сносятся нитро/прыжком).
+- Схема + fallback + json синхронно (hot-reload). Проверки: typecheck/lint/test 133/133/build/e2e 2/2.
+
+### Шаг 4.4 — Нитро-стены (таран) + меньше пустых отрезков — реализовано (ожидает playtest-приёмки)
+
+По фидбеку пользователя: во время нитро ставить «стены», которые невозможно обойти, — полные ряды
+низких преград через все полосы, чтобы игрок их таранил; между группами объектов — меньше пустых отрезков.
+
+- **Нитро-стены**: `LevelGenerator.setNitroActive(bool)` (аналог `setDensityMultiplier`). При активном
+  нитро на каждом разрешённом ряду (с учётом `minWallGapRows`) с вероятностью `nitroWallProbability 0.5`
+  ставится полный ряд `low` через все полосы — независимо от категории чанка и плотности директора
+  (гарантия появления на нитро). Уважает `lastWallRow`/`minWallGapRows`, поэтому не ломает проходимость.
+  Сброс флага в `reset()`.
+- **Синхронизация**: `GameSim` отслеживает смену `player.isAbilityActive` и пробрасывает флаг в
+  генератор после `playerSim.update`; `restart()` сбрасывает. Когда нитро кончается, стены перестают
+  ставиться (флаг возвращается в false).
+- **Конфиг**: `levelgen.nitroWallProbability 0.5` + схема + fallback + json синхронно (hot-reload).
+- **Меньше пустых отрезков**: `segmentWeights.empty` 0.1→0.05 (обструкт 0.5→0.55 — сумма без
+  изменения), `densityRange[0]` 0.2→0.3 — на низкой плотности директора групп объектов больше.
+- **Тесты**: levelgen.test.ts +3 (нитро-стен больше, чем без нитро; проходимость по 20 сидам при
+  активном нитро; стены при нитро не ближе `minWallGapRows`); nitro.test.ts +1 (во время нитро в
+  уровне появляются полные ряды `low`); «dodges charge nitro» переведён на управляемый
+  dodge-only-уровень (плотный уровень убивал наивного бота, а не тестируемую механику).
+  Проверки: typecheck/lint/test 137/137/build/e2e 2/2 (perf: avg_frame 18.3ms, draws 59 — в бюджете).
+
+### HUD: крупные счётчики внизу + шкала нитро — реализовано (ожидает playtest-приёмки)
+
+По фидбеку пользователя на визуал HUD.
+
+- **Счётчики внизу и в 3 раза крупнее**: счёт (`scoreTotal`) — центр-низ (`bottom:24px`), комбо —
+  выше него (`bottom:100px`), оба `font-size:48px` (было 16px) + тень для читаемости над сценой.
+- **Анимации (Web Animations API, без глобального CSS)**:
+  - счёт — плавный count-up (rAF, 260мс, ease-out) + pop-scale ×1.2 при изменении;
+  - комбо — pop-scale ×1.25 при начислении, ×1.5 при смене множителя (сброс анимации при повторном вводе);
+  - пропадание комбо (сброс после урона) — fade-out (opacity→0 + scale 0.7, 260мс), текст чистится по
+    окончании, отмена/повтор при новом комбо.
+- **Шкала нитро поднята и увеличена**: `bottom:180px` (было 18px), `width:720px` (было 280px),
+  `height:30px` (было 14px), лейбл NITRO 16px. Поведение (приглушение/пульс на 100%/яркость при
+  активации) сохранено.
+- **Проверки**: typecheck/lint/test 137/137/build/e2e 2/2.
+
+### Полосы-направления (lane flow) — реализовано (ожидает playtest-приёмки)
+
+По концепции UPDATE 1: полосы «едут» по-разному — реальное движение, влияющее на геймплей.
+Раскладка: полоса 0 = правая обочина (объекты стоят), полоса 1 = попутка (догоняешь объекты),
+полоса 2 = встречка (объекты летят навстречу, быстрее) **+ это зона риска**, полоса 3 = левая
+обочина (объекты стоят). Монеты/бонусы остаются на скорости игрока (не зависят от полосы).
+Стены (полные ряды) теперь расползаются по laneFlow — по решению пользователя «всё разделяется».
+
+- **Конфиг**: `laneFlow: [0, -6, 12, 0]` (юнитов/с относительно игрока; + = навстречу, − = попутно);
+  `riskZone.riskLaneCount` → `riskZone.riskLanes: [2]`. Схема (`schemas.ts`) + fallback + json синхронно.
+- **`GameSim.scrollWorld`**: препятствия `z -= max(speed + laneFlowFor(lane), MIN_RELATIVE_SPEED) * dt`
+  (полосы с нулевым/отрицательным потоком не «зависают» на экране — `MIN_RELATIVE_SPEED: 0.5`);
+  монеты/бонусы по-прежнему `z -= speed * dt`. Добавлены `laneFlowFor(lane)`, `isRiskLane(lane)`,
+  `startLane()` — первая не-рисковая полоса от центра (полоса 1).
+- **Починен баг `removeAhead()`**: использовался фиксированный буфер 150, а чанки генерируются
+  относительно текущего чанка игрока — после продвижения вновь созданные препятствия (z до
+  `(currentChunk+segmentsAhead+1)*30`) превышали буфер и мгновенно удалялись. Теперь буфер
+  относительный: `(currentChunk + segmentsAhead + 2) * chunkLength`.
+- **`LevelGenerator`**: убраны `riskLaneStart()`/`riskLaneCount`; `startLane()`, `pickBlockedLanes()`,
+  `pickRiskBiasedLane()` переведены на `riskLanes.includes(lane)`.
+- **Тесты**: levelgen EV-тест риск-зоны переписан на `riskLanes` (риск = полоса 2, безопасные = 0,1,3);
+  новый gameplay-тест «scrolls obstacles per lane flow» (инжект препятствий, проверка дельт:
+  полоса 2 > 0 > полоса 1, полоса 3 ≈ 0); нитро-тесты переведены на вход в риск-полосу одним
+  нажатием `laneLeft` и на нейтральные `laneFlow: [0,0,0,0]` где флоу мешал боту; комбо-тест
+  на стабильном конфиге `twoObstacleBias: 0, tallProbability: 0`; i-frame тест — `laneFlow: [0,0,0,0]`.
+- **Проверки**: typecheck ✓, lint ✓, test 138/138 ✓, build ✓, e2e 2/2 ✓.
+
+### Комбо: уклонения до нитро / сносы во время нитро — реализовано (ожидает playtest-приёмки)
+
+По решению пользователя: комбо — единый счётчик, но источник роста зависит от состояния нитро.
+До активации нитро комбо растёт от уклонений (как раньше); во время нитро — от удачных сносов
+(разрушений низких препятствий, +1 за объект). Удар по красным (высокие монолиты) и любой урон
+по-прежнему сбрасывают комбо. Нитро-заряд за рост комбо остаётся наградой за уклонения — сносы
+не кормят нитро вторично (только свой `gainPerSmash`).
+
+- **`Combo.ts`**: добавлен `onSmash()` (+1 комбо); `update(player, obstacles, cfg, countDodges)`
+  — при `countDodges=false` (нитро активно) уклонения не считаются и трекинг очищается (объект,
+  ушедший за спину во время нитро, позже не зачтётся как уклонение).
+- **`GameSim.ts`**: при сносе (`smashed`, только `low` под нитро) — `comboSystem.onSmash()`;
+  блок додж-комбо и нитро-заряд `gainPerDodge × множитель` теперь гейтятся по `!nitroActive`;
+  в `GameSnapshot` добавлено поле `comboSmash` (последний рост комбо был от сноса; сбрасывается
+  при уклонении-росте, уроне и рестарте).
+- **`HUD.ts`**: при росте комбо от сноса — короткая cyan-метка «SMASH» над счётчиком комбо
+  (pop + fade, Web Animations API), плюс обычный pop счётчика.
+- **Фикс бага счётчика комбо**: анимация фейда при сбросе использовала `fill:'forwards'` и
+  оставалась применённой к `comboEl` — после урона комбо снова росло, но как только `pop`-анимация
+  заканчивалась, элемент откатывался к затухшему состоянию (opacity 0) и счётчик пропадал.
+  Убран хрупкий `fadeCombo`/`comboFade` целиком: показ/скрытие счётчика теперь синхронное
+  (`display:block` пока `combo > 0`, `display:none` когда 0) — исчезать при комбо > 0 невозможно.
+- **Тесты**: combo.test.ts — `onSmash`, единый счётчик для сносов и уклонений, `countDodges=false`
+  не считает уклонения и очищает трекинг; nitro.test.ts — снос растёт комбо (`combo>0`,
+  `comboSmash=true`), тест score-бонуса монет изолирован от сносов (`nitroWallProbability: 0`,
+  чтобы комбо не росло и множитель оставался 1).
+- **Проверки**: typecheck ✓, lint ✓, test 142/142 ✓, build ✓, e2e 2/2 ✓.
+
+### Шаг 5 — Рампы тип 1 + воздух/трюки — реализовано (ожидает playtest-приёмки)
+
+По дизайну §6/§7 (`docs/update1-design.md`). Машина больше **не прыгает сама**
+(Space → нитро, вертикаль только через трамплины); появились **красные стены** —
+настоящие барьеры (полный ряд tall, игнорируют laneFlow, проход только через
+трамплин).
+
+- **Воздух** (`src/core/gameplay/air.ts`, чистый): `airState grounded|airborne|landing`,
+  `airTime`, `spinAngle`, `trickCount` (вместо `isJumping`); `airHeight` — парабола с пиком
+  `ramp.height: 8.0` (выше tall 2.5 → перелёт); `addTrick` (+2π вращения за смену полосы в
+  воздухе); `updateAir` airborne→landing→grounded с `LandingResult {trickCount}`;
+  `trickScoreMultiplier` — серия с `trickSeriesStart: 2`.
+- **`PlayerSim`**: `launchFromRamp()`; трюки за `laneDelta` в полёте (не чаще
+  `trickCooldownSeconds 0.3` — иначе при 3-секундном полёте награды взрываются); буст
+  `boostMultiplier 1.6` на время полёта (ускорение); приземление — результат.
+- **`Collision`**: 5-й параметр `ramps`, `rampHit`; в полёте коллизии препятствий отключены
+  (перелёт высоких).
+- **`LevelGenerator`**: свободные рампы (`rampProbability 0.06`) встречаются сами по себе;
+  **красные стены** (`redWallProbability 0.04`) только в obstacle-сегментах, с гарантированным
+  трамплином за `rampLeadRows: 3` ряда перед стеной. Полоса каждой рампы на своей строке
+  очищается от препятствий/монет после генерации — к трамплину всегда можно доехать (раньше
+  полоса часто совпадала с препятствием).
+- **`passability`**: рампы (воздух открывает все полосы) и красные стены (требуют рампу) —
+  40 сидов × 300 чанков зелёный.
+- **`GameSim`**: снапшот несёт `ramps`; `rampHit → launchFromRamp` (+ `used`); `onLanding`:
+  на препятствии — ломает его без наград, чисто с трюками — `tricks·5` нитро + `tricks·1`
+  монет + score-бонус серии; красные стены игнорируют laneFlow.
+- **Ввод**: `InputContext` — car фильтрует `jump`; `InputAdapter` — Space/ArrowUp → нитро.
+- **Визуал** (`GameScene`): рампы — оранжевый клин (высота визуально капается до 3.5,
+  конус-маркер поднимается под высоту) для читаемости заранее; вращение куба по `spinAngle`,
+  искры при приземлении; камера следует за игроком по высоте (`positionYFollow`/`lookYFollow 0.6`).
+- **Конфиг**: `game.ramp {flightTimeSeconds 3.0, landingTimeSeconds 0.5, height 8.0,
+  boostMultiplier 1.6, trickCooldownSeconds 0.3, trickNitroGain 5, trickCoinGain 1,
+  trickSeriesStart 2, trickSeriesScoreMultiplier 1}`; `game.camera {positionYFollow 0.6,
+  lookYFollow 0.6}`; `levelgen {rampProbability 0.06, redWallProbability 0.04, rampLeadRows 3}`
+  — схема+fallback синхронно.
+- **Общий `startLane()`**: риск-avoiding старт вынесен в `src/core/levelgen/startLane.ts`
+  (раньше `isPassable` стартовал с `floor(lanes/2)`, а симы с первой безопасной — расхождение
+  давало ложные dead-end на сиде 29). Используется в `LevelGenerator`, `GameSim` и `passability`.
+- **Тесты**: unit **160/160**. Новые: `air.test.ts` (формулы воздуха; PlayerSim запуск/трюки/
+  сброс при посадке, буст скорости в полёте и его спад после посадки, кд трюков; GameSim —
+  лендинг с трюками даёт нитро+монеты, без трюков нет, перелёт высокого без урона и без
+  разрушения, приземление на препятствии ломает его без наград);
+  `levelgen.test.ts` (у каждой красной стены трамплин за `rampLeadRows`; красная стена
+  непроходима без рампы и проходима с рампой; каждая рампа стоит на строке без препятствий на
+  своей полосе). Боты доджа в комбо/нитро-тестах — «умный»
+  бот `tests/unit/dodgeBot.ts` (выбирает самую свободную полосу) + нейтральные
+  `laneFlow: [0,0,0,0]` (поток +12 на полосе 2 убивал наивного бота); убран `['jump']`
+  (машина не прыгает). Попутно найден и закрыт баг: старт `GameSim` на риск-avoiding полосе
+  vs `isPassable` с центра — теперь общий `startLane()`.
+- **Проверки**: typecheck ✓, lint ✓, test 160/160 ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.8ms, draws 60 — в бюджете).
+
+### Шаг 5.1 — Надёжность рамп, нитро-челленджи, combo-группы и воздушные монеты — реализовано (ожидает playtest-приёмки)
+
+По playtest-фидбеку устранены ситуации, когда рампа визуально расходилась с красной стеной,
+цепочка близких объектов завышала комбо, а проверка монет не учитывала высоту.
+
+- **Связанные рампа и красная стена**: у пары общий `gateId`. Красная стена и её рампа
+  игнорируют `laneFlow` и движутся с одинаковой относительной скоростью, поэтому дистанция
+  между ними не меняется. Перед рампой очищается подход, между рампой и стеной — её полоса;
+  `isPassable` требует связанную достижимую рампу, а не любую рампу поблизости.
+- **Прерывание нитро**: реальный урон от неразрушаемого препятствия выключает активное нитро,
+  но сохраняет оставшийся заряд. Если удар пришёлся в грас-период при 100%, остаётся 97% —
+  требуется минимум одна обычная монета для новой активации. Контакт во время i-frames нитро
+  не прерывает.
+- **Combo-группы**: близкие объекты одной полосы считаются одной цепочкой. Группировка идёт
+  по фактическому времени прохождения (`combo.chainWindowSeconds: 0.85`), поэтому автоматически
+  учитывает скорость игрока и `laneFlow`; разрыв больше окна начинает новое уклонение.
+- **Проходимость**: обычные полные низкие стены больше не генерируются без готового нитро.
+  Обычный сложный ряд всегда оставляет достижимую полосу. Красные стены имеют связанную рампу
+  и очищенный подход. Полный nitro-ready паттерн помечен как требующий нитро; если готовность
+  потеряна до встречи с ним, runtime-защита открывает текущую полосу игрока.
+- **Редкие нитро-челленджи**: при полном, но неактивном нитро шанс паттерна 0.16 на допустимый
+  ряд, кулдаун 8 рядов; 85% паттернов оставляют узкий объезд, 15% — полный низкий ряд.
+  Во время активного нитро шанс 0.22; используются только 2–3 низких объекта, чтобы продолжение
+  нитро требовало манёвра и осознанного сноса, а не бесплатного потока целей.
+- **Воздушные монеты**: рампы по очереди создают спокойный путь из 5 монет и активный зигзаг
+  из 7 монет. Монеты распределены по времени полёта 0.45–2.55с и высоте параболы. Их `z`
+  пересчитывается от текущей скорости каждый tick, поэтому включение нитро в воздухе не ломает
+  траекторию.
+- **Честная коллизия монет**: вместо проверки «та же полоса» используется 3D-пересечение
+  сферы монеты с хитбоксом игрока. Пролёт выше/ниже не собирает монету; `coin.collectGrace: 0.12`
+  прощает касание рядом с видимыми границами. За один tick корректно учитывается несколько монет.
+- **Проверки**: typecheck ✓, lint ✓, test **169/169** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.5ms, avg_fps 59, avg_draws 58, max_draws 64).
+
+### Шаг 5.2 — Больше smash-моментов, больше рамп и мягкая сложность длинного забега — реализовано (ожидает playtest-приёмки)
+
+- **Нитро-комбинации чаще, но с ограничителем**: `nitroWallProbability` 0.22→0.30,
+  `nitroChallengeCooldownRows` 8→6. Во время активного нитро 35% челленджей становятся
+  полным рядом низких препятствий, остальные оставляют узкий маршрут и 2–3 цели. При окончании
+  нитро заранее созданный обязательный ряд по-прежнему автоматически открывает безопасную полосу.
+- **Первый вариант цветового сигнала**: низкие цели при нитро были золотыми; в шаге 5.3
+  сигнал развёрнут по результатам следующего решения — обычные цели стали тёмно-золотыми,
+  а при нитро и после сноса зелёными. Высокие неразрушаемые остаются красными.
+- **Рампы немного чаще**: `rampProbability` 0.06→0.08. Связанные рампы красных стен не
+  затронуты вероятностью и остаются гарантированными.
+- **Мягкая сложность длинного забега**: новый `longRunDifficulty`. Первые 60с без дополнительного
+  давления; затем в течение 300с smoothstep-кривая постепенно добавляет максимум +0.10 к
+  плотности и +0.08 к вероятности двух препятствий. Скорость, красные стены, nitro-ready
+  челленджи и правила урона этой системой не усиливаются; маршрут остаётся гарантированным.
+- **Проверки**: typecheck ✓, lint ✓, test **173/173** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.5ms, avg_fps 59, avg_draws 58, max_draws 64).
+
+### Шаг 5.3 — Ранний темп, читаемые smash-цели и доступное первое нитро — реализовано (ожидает playtest-приёмки)
+
+- **Цвета разрушаемых целей развёрнуты**: обычные низкие препятствия теперь тёмно-золотые —
+  близкие к монетам, но заметно темнее. При активном нитро они становятся зелёными; зелёными
+  стали и обломки после сноса. Высокие неразрушаемые препятствия остаются красными.
+- **Старт стал быстрее и плотнее**: базовая скорость 8→10, минимальная скорость 5.2→7,
+  `accelPerSecond` 1.8→2.0; минимальная плотность 0.30→0.36, вес препятствий 0.55→0.58,
+  пустых рядов 0.05→0.02, bias двух препятствий 0.65→0.70. Долгая кривая сложности
+  остаётся мягкой и не менялась.
+- **Пассивное нитро на обеих средних полосах**: отдельный список `nitroChargeLanes: [1,2]`;
+  скорость накопления снижена с 3 до 2.5 единицы/с. Риск-логика генератора по-прежнему
+  использует только встречную полосу 2 — вторая средняя полоса не получает риск-бонусов.
+- **Первое нитро вероятнее в первые 20с**: награда за монету 3→4, за уклонение 7→8.
+  Двадцать секунд на средней полосе дают 50% шкалы; ориентир умеренно активного старта
+  (4 монеты + 5 уклонений) вместе с пассивным зарядом заполняет шкалу полностью.
+- **Проверки**: typecheck ✓, lint ✓, test **174/174** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.8ms, avg_fps 58, avg_draws 59, max_draws 64).
+
+### Шаг 5.4 — Ранние трамплины, чуть более активный старт и ready-индикация нитро — реализовано (ожидает playtest-приёмки)
+
+- **Трамплины с первых секунд**: свободная рампа теперь разрешена уже в первом ряду, а не
+  только после шестого локального ряда чанка. Первые 14 рядов используют повышенный шанс 0.22;
+  далее шанс также поднят 0.08→0.10. Минимальный интервал — 3 ряда, чтобы рампы не спамились.
+- **Безопасное соседство с красными стенами**: свободные рампы не пересекают обязательный
+  коридор. Если свободная и обязательная рампы совпали, существующая рампа получает `gateId`;
+  массовые seed-тесты продолжают подтверждать проходимость.
+- **Старт ещё немного сложнее**: минимальная плотность 0.36→0.39, вес препятствий 0.58→0.59,
+  вес пустых сегментов 0.02→0.01, bias двух препятствий 0.70→0.72. Красные стены, урон и
+  долгосрочная кривая сложности не усиливались.
+- **Цвет шкалы нитро**: при накоплении она остаётся голубой; при 100% становится ярко-зелёной
+  с зелёным свечением. Во время активного нитро зелёный цвет сохраняется при расходовании.
+- **Проверки**: typecheck ✓, lint ✓, test **175/175** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.2ms, avg_fps 59, avg_draws 63, max_draws 71).
+
+### Шаг 5.5 — Временной ритм рамп и приоритет красных стен — реализовано (ожидает playtest-приёмки)
+
+- **Первые 10 секунд без рамп**: `ramp.startDelaySeconds 10`. Пока таймер не истёк,
+  из игрового буфера удаляются как свободные рампы, так и связанные пары рампа+стена.
+- **Кулдаун после фактического прыжка**: `ramp.cooldownSeconds 10`. После попадания на рампу
+  следующие рампы не появляются минимум 10 секунд. Связанная стена текущего прыжка защищена
+  от удаления; последующие связанные пары на кулдауне удаляются целиком, без непроходимой стены.
+- **Красные стены снова доминируют**: `redWallProbability` 0.04→0.12, вероятность одиночной
+  рампы 0.10→0.01; ранний повышенный шанс отключён. На 1000 тестовых чанках связанных рамп
+  фактически больше, чем одиночных.
+- **Ответ по наблюдению**: стены не были удалены в шаге 5.4, но оставались редкими, тогда как
+  одиночные рампы были резко усилены — поэтому связки визуально терялись. Новый баланс это
+  разворачивает и сохраняет гарантию рампы перед каждой созданной красной стеной.
+- **Проверки**: typecheck ✓, lint ✓, test **178/178** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 18.1ms, avg_fps 58, avg_draws 63, max_draws 70).
+
+### Шаг 5.6 — Трамплины чаще — реализовано (ожидает playtest-приёмки)
+
+- Вероятность одиночной рампы увеличена 0.01→0.02, красной стены со связанной рампой —
+  0.12→0.18. Связанные события сохраняют приоритет и статистически остаются чаще одиночных.
+- Первые 10 секунд без рамп и 10-секундный кулдаун после прыжка не менялись.
+
+### Шаг 5.7 — Усиление фактического и субъективного влияния музыки — реализовано (ожидает playtest-приёмки)
+
+- **База сложности отделена от музыки**: `baseDensity 0.42`, диапазон `[0.30,0.90]`,
+  музыкальная дельта максимум ±0.12. Calm теперь реально разрежает трассу, peak уплотняет её,
+  а мягкая долгосрочная сложность остаётся отдельным слагаемым.
+- **`coinFrequency` подключён**: интент Director преобразуется в множитель 0.4–1.6 и влияет
+  как на монетные сегменты, так и на монеты между препятствиями. Статистический тест подтверждает
+  материально разное число монет на одном seed.
+- **Планировщик прибытия**: `musicPatterns.ts` переводит время до музыкального события в дистанцию
+  по текущей скорости (границы 36–110). Build-up заранее планирует направляющую линию или связку
+  рампа+стена, intense — безопасный слалом, peak — активную монетную траекторию, cooldown —
+  спокойную линию.
+- **Безопасная библиотека паттернов**: музыкальный коридор очищается от конфликтующих объектов и
+  связанных стен; слалом блокирует только одну полосу в ряду; peak-стена всегда получает рампу и
+  сохраняет общий `gateId`. Стартовый запрет и кулдаун рамп продолжают иметь приоритет.
+- **Три масштаба реакции**: бит усиливает свет/эмиссию/масштаб объектов и монет; короткая фраза
+  управляет паттернами и траекториями; секция управляет фазой, скоростью, плотностью и палитрой.
+- **Контраст фаз усилен**: calm/cooldown медленнее, свободнее и богаче спокойными монетами;
+  intense/peak быстрее, плотнее и визуально ярче. Тишина немедленно гасит быстрый VFX до 30%,
+  яркость музыки влияет на оттенок неба и вес фазы Director увеличен.
+- **Относительное турбо**: вместо порога 0.75 используется нижний safety-порог 0.35 + рост на
+  0.10 относительно 8-секундной базы + верхний 80-й перцентиль. После 0.5с устойчивого роста
+  турбо включается на ближайшем бите либо максимум через 0.75с.
+- **Диагностика F3**: отображаются последний музыкальный паттерн, запрошенная→фактическая
+  плотность и действующий множитель монет.
+- **Проверки**: typecheck ✓, lint ✓, test **185/185** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 17.8ms, avg_fps 58, avg_draws 64, max_draws 72).
+
+### Шаг 5.8 — Больше красных манёвров и меньше монет при нитро — реализовано (ожидает playtest-приёмки)
+
+- **Красные объекты чаще требуют смены полосы**: `tallProbability` 0.30→0.35. Вероятность
+  полных красных стен не менялась, поэтому растёт число обычных манёвров, а не обязательных
+  прыжков. Статистический тест удерживает долю tall в диапазоне 0.29–0.41.
+- **Музыкальный intense-slalom** теперь чередует tall-красные препятствия и low-цели:
+  игрок одновременно маневрирует и видит точки для будущего/активного нитро.
+- **Монеты при нитро**: новый `nitroCoinFrequencyMultiplier 0.35` применяется к будущей
+  генерации. При активации дальние наземные монеты (`z>25`) детерминированно прореживаются
+  примерно до трети; ближайшие и воздушные монеты сохраняются ради честности.
+- **Музыкальные монетные паттерны при нитро** также сокращаются примерно до трети, поэтому
+  основной способ поддерживать нитро — маневрировать и разрушать зелёные цели.
+- **Разрушаемых рядов на 25% больше**: `nitroWallProbability` повышен 0.30→0.375.
+  Кулдаун и гарантии проходимости сохранены.
+- После естественного окончания нитро действует 0.25с smash-grace. Разрушение low-цели в этом
+  окне без урона добавляет обычные `gainPerSmash: 3` в шкалу, но не активирует нитро и не
+  продлевает окно. Это только прощение пограничного столкновения. Столкновение/принудительное
+  прерывание grace не даёт.
+- За последние 0.5с заряда зелёные цели плавно тускнеют; после обнуления цвет продолжает
+  затухать в grace-окне. `GameSnapshot.nitroSmashVisual` управляет непрерывным blend материалов.
+- **Трамплины**: основной клин и верхний маркер перекрашены из оранжевого в ярко-голубой.
+- **Проверки**: typecheck ✓, lint ✓, test **201/201** ✓, build ✓, e2e 2/2 ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 65, max_draws 72).
+
+### Шаг 6 — Поезда как временный второй уровень — ПРИНЯТ пользователем
+
+- После любой использованной рампы с вероятностью 38% планируется поезд без отдельного вида
+  трамплина. Воздушные монеты однозначно ведут на его полосу; автодоводки нет.
+- На фиолетовой крыше безопасно, разрешено нитро и размещена плотная цепочка монет. Крышные
+  монеты — исключение из нитро-прореживания, но новые монеты при активации не добавляются.
+- Музыкальная длительность: calm/cooldown 2.8 с, buildUp/intense 3.5 с, peak 4.2 с. Нитро не сокращает
+  поездку. Длина автоматически учитывает потоки полос `[0,-6,+12,0]`.
+- Боковой ввод запускает сход на соседнюю полосу без трюка. На дороге столкновение с поездом
+  наносит урон и прерывает нитро. Игрок сам оценивает безопасность раннего схода.
+- Конец безопасен: нисходящие монеты, очищенная исходная полоса и короткий посадочный коридор.
+  Объём самого поезда также очищается от наземных объектов, соседние полосы не меняются.
+- В core добавлены `TrainEntity`, состояния `trainRoof/trainExit`, детерминированный PRNG и
+  отдельный конфиг `game.train`; в render — пул длинных двухцветных фиолетовых поездов.
+- После первого playtest исправлена посадка в торец: траектория теперь непрерывно приходит на
+  высоту крыши с учётом фактического выравнивания по нужной полосе.
+- Несобранные монеты поезда удаляются при любом сходе и при уходе самого поезда. Они больше не
+  продолжают двигаться над/за игроком.
+- Добавлен show-режим крыши: автоматический дрифт, вращения и кульбиты без игровых трюков,
+  мощное бирюзовое свечение машины и яркий beat-пульс поезда.
+- Поезд даёт ускорение 1.35×; после схода остаётся 1.20× с плавным затуханием за 8 секунд.
+- Первые 30 рядов стали плотнее на 0.10; встречка и обочины `[0,2,3]` получают вес препятствий
+  2.2. Гарантия свободной полосы не менялась.
+- Во время поездки препятствия слева и справа от поезда взрываются мощным smash-эффектом,
+  когда входят в окно рядом с игроком. Это визуальная волна разрушения без комбо и наград.
+- Поезда ограничены средними полосами `[1,2]`, стали ниже (2.7) и на 22% короче. Игрок
+  приземляется с отступом 6 единиц от задней грани.
+- После playtest FOV снижен 130°→100°, а время на крыше сокращено на 30%:
+  calm/cooldown 2.8 с, buildUp/intense 3.5 с, peak 4.2 с.
+- Взрывное окно сдвинуто ближе к игроку (`z=-2…4`). На крыше камера получает FOV 100°,
+  усиленную вибрацию и отдельный максимально мощный режим speed-lines.
+- Все поездные VFX быстро, но плавно разгоняются и затухают: единый экспоненциальный коэффициент
+  со smoothstep управляет FOV, тряской, speed-lines, свечением и амплитудой кульбитов.
+- После посадки с вероятностью 35% за 1.5–2.0с подъезжает сине-бирюзовый второй поезд на другой
+  средней полосе. У него независимый таймер и ±15% вариация длины/времени; между доступными
+  крышами можно свободно переключаться обычным вводом и возвращаться, пока поезд не закончился.
+  Ранний ввод в сторону ещё далёкого второго поезда удерживает игрока на текущей крыше, а в
+  последние 0.5с сближения тот же ввод гарантированно завершает переход без провала внутрь корпуса.
+- С вероятностью 45% на крыше появляется высокое неразрушаемое препятствие. Нитро и боковая
+  взрывная волна его не берут; требуется перейти на другой поезд или сойти, контакт наносит урон.
+- Проверки: typecheck ✓, lint ✓, test **201/201** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.2ms, avg_fps 56, avg_draws 64, max_draws 72).
+
+### Итерация «Цельный забег по песне» — ПРИНЯТА пользователем
+
+- После выбора файла показывается отсчёт `3–2–1–GO`; симуляция в это время заморожена, но
+  стартовые чанки уже сгенерированы и препятствия видны, поэтому экшен начинается сразу.
+- `Esc` синхронно приостанавливает игру и аудио, очищая буфер ввода; повторный `Esc` продолжает.
+- Пауза, победный экран, countdown и game over передают сцене нулевой visual `dt`: дорога,
+  ветер и остальные временные эффекты полностью замирают, но статичный кадр продолжает рендериться.
+- Вверху показывается прогресс `текущее время / длительность` и заполнение трека.
+- Естественное окончание файла завершает забег и показывает очки, дистанцию, монеты,
+  максимальное комбо, разрушения, трюки и время на поездах. Доступны повтор и выбор файла.
+- При первом полном заполнении нитро за забег один раз появляется подсказка `Нажми ↑ для нитро`.
+- Перед каждым из первых трёх доступных трамплинов ставится одна монета на его полосе. Монета
+  привязана к рампе и сохраняет отступ при разном `laneFlow`; удалённая рампа не оставляет монету.
+- Проверки: typecheck ✓, lint ✓, test **203/203** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.0ms, avg_fps 54, avg_draws 64, max_draws 72); ручная browser-QA
+  подтвердила остановку дистанции на паузе, продолжение по Esc и отсутствие console errors.
+
+### Шаг 7 — финализация машины: баланс безудержной гонки — ПРИНЯТ пользователем
+
+- Ориентир баланса — читаемое чередование напряжения и передышки в духе Beat Saber, при этом
+  основной fantasy машины — частые перестроения, прыжки, нитро и грандиозные разрушения.
+- Исправлен стартовый провал трамплинов: первые 10 секунд они всё ещё не могут достигнуть
+  игрока, но дальние рампы с прибытием после запрета больше не вырезаются из буфера.
+- Обычные трамплины учащены (`rampProbability 0.02→0.03`); красные стены со связанными
+  рампами остаются чаще одиночных трамплинов. Первые три подсказочные монеты назначаются
+  только после окончания стартового запрета.
+- При нитро специальные разрушаемые ряды учащены (`0.375→0.42`), а полный ряд теперь
+  выбирается в 45% таких сцен вместо 35%. Между ними остаются частичные ряды и манёвры.
+- Поезд стал немного реже (`0.38→0.32`, кулдаун 15с), чтобы работать передышкой и разнообразием,
+  а не вытеснять обычные прыжки.
+- Добавлены регрессионный тест ранней рампы и статистическая проверка частых, но не постоянных
+  полных нитро-рядов. Проверки: typecheck ✓, lint ✓, unit **205/205** ✓, build ✓,
+  e2e **2/2** ✓ (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 64, max_draws 72).
+- Пользователь принял результат после плейтеста. Машинный цикл считается достаточно цельным
+  для перехода к следующему режиму; дальнейший тюнинг чисел возможен позже по новым наблюдениям.
+
+### Шаг 8 — конь: базовый цикл и двусторонний переход — РЕАЛИЗОВАН, ждёт плейтеста
+
+- Подбор 🐎 автоматически включает коня; подбор прототипного куба машины возвращает car.
+  Музыкальный планировщик должен давать в среднем 3–4 смены за типичную песню.
+- Скорость и скоростной VFX непрерывно переносятся между режимами. Нитро в horse-режиме
+  заморожено и полностью скрыто; при возврате заряд разблокируется. Конь с близким к максимуму
+  разгоном (`horseMomentum ≥ 0.75`) превращается в машину с активным 100% нитро, которое
+  расходуется штатно.
+- Конь имеет четыре полосы, перестраивается в воздухе и делает короткий прыжок по `Space/↑`.
+  Ранний ввод за `0.15–0.20 с` до касания буферизуется, поэтому следующий прыжок начинается
+  честно без требования угадать последний кадр приземления.
+- Однократное нажатие `↓` в воздухе включает плавный fast-fall до конца дуги: нисходящая
+  часть ускорена до `4×`, но конь не телепортируется к дороге. Команда детерминированно
+  записывается в replay.
+- Чистый прыжок через один или несколько низких объектов даёт один шаг скрытого
+  `horseMomentum` строго в кадр фактического касания земли, а не в начале визуальной посадки;
+  пустой прыжок не награждается. Серия разгоняет коня до аналога полного нитро, а удар снимает
+  целевой буст без резкого торможения фактической скорости.
+- Horse-профиль не создаёт автомобильные рампы, поезда, красные рамп-стены и нитро-ряды.
+  Переходные bridge-паттерны состоят из совместимых низких препятствий и не ставят игру на паузу.
+- Длинный прыжок, подкат и специальные глубокие препятствия остаются шагом 9; полноценное
+  конное комбо, perfect-тайминг и награды — шагом 10. Детальный порядок и критерии записаны
+  в `docs/update1-plan.md`, системные контракты — в `docs/update1-design.md`.
+- Фактические параметры первой версии: полёт `0.9 с`, посадка `0.1 с`, высота `2.3`,
+  jump-buffer `0.18 с`, fast-fall `4×`; momentum `+0.2` за чистую дугу, максимум `+60%`,
+  задержка распада 3 с и распад 0.04/с; speed carry 1.2 с.
+- Следующий объект смены режима предлагается в музыкальном окне после 45 с или принудительно
+  появляется к 65 с, если другого mode-бонуса нет. Режим не меняется по таймеру: только
+  физический сбор 🐎 или голубого куба машины. Ручной dev-toggle `M` удалён.
+- Реализованы отдельный `AirSource`, horse-профиль LevelGenerator, атомарная очистка рамп,
+  поездов, красных стен и нитро-рядов, 0.8-секундный безопасный lead текущей полосы,
+  скрытие нитро-HUD и плавные форма/камера/speed-VFX.
+- Высокий разгон коня с `horseMomentum 0.55+` плавно включает nitro-like speed-VFX: усиленные
+  speed-lines, FOV, вибрацию, краевое свечение и скоростное смещение камеры. Эффект зависит от
+  momentum, поэтому остаётся непрерывным в прыжке и при посадке.
+- Конный прыжок получил отдельный плавный профиль камеры. Чтобы объекты не казались быстрее
+  в воздухе и не создавали ложное торможение на земле, воздушные FOV/отъезд уменьшены до
+  `+3°/0.25`, а основное ощущение высоты создают вертикальная композиция, точка взгляда и
+  подавление слежения камеры за Y коня на 75%. Все величины вынесены в `game.horse`.
+- Добавлено 9 horse-сценариев: короткая дуга и воздушная смена полосы, fast-fall, ранний
+  jump-buffer, momentum/нитро-конвертация, заморозка заряда, переходы только по сбору,
+  взаимные бонусы, одна награда за несколько объектов и проходимый horse-профиль.
+- Проверки: typecheck ✓, lint ✓, unit **217/217** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.2ms, avg_fps 56, avg_draws 64, max_draws 72).
+
+### Шаг 9 — конь: подкат и action-группы — РЕАЛИЗОВАН, ждёт плейтеста
+
+- Длинный прыжок и глубокие препятствия исключены из текущего scope: на скорости их функцию
+  уже выполняют цепочки обычных низких объектов. Шаг сосредоточен на подкате и более активном
+  ритме horse-режима.
+- Однократное `↓` на земле запускает подкат; удержание не требуется. Минимальная поза длится
+  0.32 с, затем автоматически продлевается, пока впереди или над текущей полосой остаётся
+  подкатная группа, и заканчивается через безопасный буфер 0.12 с. Перестроения разрешены.
+- Прыжок во время подката немедленно возвращает полную высоту и запускает обычную дугу:
+  под красной перекладиной это приводит к штатному столкновению и потере здоровья.
+- Новый `overhead` — красные П-образные ворота с просветом 0.58 и отдельной верхней коллизией.
+  Конь визуально сжимается до высоты 0.36 и вытягивается вперёд, поэтому причина прохода
+  читается геометрически, а не скрытым флагом неуязвимости.
+- Horse-LevelGen теперь создаёт action-группы. Первый новый horse-чанк гарантированно прыжковый,
+  второй — подкатный; далее событие есть примерно в 74% чанков, 65% групп перекрывают все полосы.
+  Подкат выбирается с вероятностью 52% и обычно содержит 3–5 ворот, прыжок — 1–3 ряда.
+  Поэтому крайние полосы больше не являются постоянным способом избежать действий.
+- Успешно перелетевшие низкие объекты и пройденные в подкате ворота взрываются. Сила и число
+  фрагментов растут квадратично к последнему элементу группы до `3.5×`; последний взрыв заметно
+  мощнее. Одна продольная группа даёт только один шаг momentum.
+- После плейтеста успешный объект сначала помечается `cleared` и исключается из повторной
+  коллизии, но физически взрывается через 0.14 с. Поэтому разрушение видно немного позади коня,
+  а награда сохраняет исходный честный момент успеха.
+- Награда прыжка применяется при фактической посадке; награда подката — сразу после первого
+  реально пройденного элемента группы. Оба события создают явный `horseBoostPulse`: вспышку,
+  camera-kick, усиление FOV, speed-lines и свечения персонажа.
+- Камера подката быстро опускается на 1.55 и снижает точку взгляда на 0.35. Высокие препятствия
+  обоих режимов после прохождения игрока плавно становятся полупрозрачными до 18% opacity;
+  низкие препятствия и монеты не затрагиваются.
+- В подкате добавлен плавный крен 0.14 рад: на полосах 0–1 камера наклоняется в одну сторону,
+  на 2–3 — в противоположную. Визуальный browser-smoke подтвердил низкий ракурс, сжатие и крен.
+- Исправлена причина нарастающих пустых секций: новые чанки теперь при подключении компенсируют
+  уже пройденную `player.distance`, поэтому рабочий буфер остаётся рядом с игроком и после
+  сотен метров. Регрессионный тест долгого забега фиксирует верхнюю границу позиции новых объектов.
+- Старые локальные bridge-вставки удалены: при `car↔horse` существующий буфер больше не
+  очищается и не заменяется искусственной связкой. Новый профиль применяется только к следующим
+  чанкам, а уже видимые ряды естественно доезжают за игрока.
+- Обычный horse-генератор иногда создаёт длинные slide-группы из 6–8 ворот (`14%` slide-секций).
+  После регулярных прыжковых групп в 32% случаев следующий чанк становится follow-up: красные
+  ворота подката либо ряд из трёх низких объектов с одной полосой для напряжённого объезда.
+- Конфиги синхронизированы в JSON/Zod/fallback. Добавлены проверки одноразового ввода,
+  автопродления, прыжка из подката, верхней коллизии, одной награды за группу, возрастающего
+  smash, action-генерации и проходимости.
+- Проверки: typecheck ✓, lint ✓, unit **222/222** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.0ms, avg_fps 54, avg_draws 64, max_draws 72). Визуальный browser-smoke:
+  сцена, сжатие и полосозависимый крен рендерятся без ошибок/предупреждений.
+
+#### Смягчение сложности после плейтеста
+
+- Общая кривая обоих режимов снижена без удаления экшена: стартовая скорость `10→9.5`, максимум
+  `30→28`, естественный рост `0.26→0.22` в секунду, ускорение к музыкальной цели `2.0→1.8`.
+- Машина: базовая плотность `0.42→0.38`, диапазон `0.30–0.90→0.28–0.86`, музыкальная дельта
+  `±0.12→±0.10`, bias двух объектов `0.72→0.64`. Нитро-челленджи и полные smash-ряды стали
+  умеренно реже, а долгий забег добавляет максимум `+0.07` плотности и `+0.05` multi-bias.
+- Tall-доля `0.35` и преимущество рамп со стенами сохранены как важные контракты разнообразия.
+- Конь: action-чанки `0.86→0.74`, обязательное перекрытие `0.82→0.65`, длинные подкаты
+  `0.22→0.14`, напряжённые продолжения прыжка `0.50→0.32`. Входная связка короче и просторнее.
+- Проверки баланс-прохода: typecheck ✓, lint ✓, unit **222/222** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.8ms, avg_fps 53, avg_draws 64, max_draws 72).
+
+#### Horse-playtest: передышки, прозрачный подкат и beat-бластер
+
+- Добавлены обочинные rest-зоны: 16% обычных horse-чанков не создают action-группу, оставляют
+  дорогу свободной и прокладывают непрерывную монетную дорожку по полосе 0 или 3. Вступительные
+  и принудительные follow-up-секции этим правилом не заменяются.
+- Красные overhead-группы с просветом стали реже: `slideGroupProbability 0.52→0.38`.
+  Гарантированное первое знакомство с подкатом и редкие длинные секции сохранены.
+- После начала подката определяется конкретный `activeHorseSlideGroupId`. Только ворота этой
+  группы становятся полупрозрачными до 28%, включая ещё не пройденную часть, поэтому за ними
+  видны дорога и следующие объекты. Обычные красные препятствия впереди не затрагиваются.
+- На последней ступени скорости (`horseMomentum ≥ 0.85`) на коне появляется двухствольный
+  голубой бластер. Новый музыкальный бит даёт выстрел, только если прошёл кулдаун 1.25 с.
+  Физическая ракета летит со скоростью 34, строго по текущей полосе, имеет дальность 85 м и
+  разбивает первое попавшееся разрушаемое препятствие; momentum, комбо и нитро за это не даются.
+- Бластер и ракеты имеют отдельную эмиссивную геометрию и бит-пульс. При уходе из horse-режима
+  оставшиеся ракеты удаляются; unbreakable/train-объекты ими не разрушаются.
+- Проверки: typecheck ✓, lint ✓, unit **223/223** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 64, max_draws 72).
+
+#### Horse-playtest 2: читаемость, групповой урон и событийные превращения
+
+- Конь больше не вращается вокруг осей во время движения, прыжка и короткого участка на поезде.
+  Сохраняются движение по дуге, масштабирование, свечение, FOV и speed-FX.
+- Крен камеры в подкате усилен `0.08→0.14 рад`; направление различается для левых и правых полос.
+- Первое реальное столкновение с action-группой наносит штатный урон, остальные элементы того же
+  `actionGroupId` остаются видимыми, но больше не могут повторно отнять здоровье.
+- Если следующий jump после slide ближе 24 м, jump-группа переносится в следующий чанк.
+- Action-объекты взрываются только при `horseMomentum ≥ 0.50`. До порога чистое действие даёт
+  momentum, но объекты не разлетаются.
+- Разгон замедлен: `momentumPerClear 0.20→0.15`, максимум требует 7 чистых групп вместо 5.
+  Бластер открывается раньше: `0.95→0.85`, обычно после шестой чистой группы.
+- 🐎 предлагается только после 50 с: с шансом 70% в середине ramp-полёта или с шансом 80%
+  примерно за секунду до конца поезда. После 65 с следующее подходящее событие гарантировано.
+- Куб машины предлагается после 22 с horse-режима: с шансом 70% на вершине прыжка через группу
+  минимум из трёх рядов; после 65 с следующий подходящий большой прыжок гарантирует куб.
+- Переключение больше не удаляет препятствия, монеты, рампы и поезда и не заземляет персонажа.
+  Старые ряды доходят естественно, новые чанки используют новый профиль. Остаточные car-рампы
+  работают для коня без спавна новых поездов; overhead при возврате в car становится ghost-рядом.
+- Ранний car-трафик больше не утяжеляет обочины: усиленный список `[0,2,3]→[1,2]`. Обочины
+  0 и 3 снова имеют базовый вес препятствий; постоянная риск-полоса остаётся только 2.
+- Проверки: typecheck ✓, lint ✓, unit **225/225** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 63, max_draws 71).
+
+#### Hotfix: mode-бонусы фактически не появлялись
+
+- Найдена причина плейтестом: safety-фильтр проверял весь ~90-метровый буфер и почти всегда
+  отклонял ramp/train-событие из-за дальней red-wall или nitro-группы до проверки 70/80%.
+- Ложная блокировка удалена. Остаточные nitro-ряды проходимы конём прыжком, red-wall сохраняет
+  ведущую к ней старую рампу; такая рампа работает для коня, но не создаёт новый поезд.
+- Для симметричного `horse→car` старые overhead не исчезают: становятся opacity 0.20 и теряют
+  коллизию как короткий переходный хвост, затем естественно уходят за игрока.
+- Статистический тест на 80 seed подтверждает рабочий 70% ramp-шанс; отдельная выборка подтверждает
+  гарантированный следующий ramp-event после 65 с даже при заполненном старом буфере.
+- Проверки: typecheck ✓, lint ✓, unit **226/226** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.0ms, avg_fps 54, avg_draws 63, max_draws 71).
+
+#### Horse-playtest 3: воздушный маршрут к сфере и читаемый скоростной бластер
+
+- При успешном ramp-событии сфера коня теперь не создаётся независимо: она заменяет одну из монет
+  ближе ко второй половине уже рассчитанной воздушной дорожки, наследуя её полосу, высоту и время.
+  Монеты до неё естественно ведут игрока к подбору; дублирующей монеты внутри сферы нет.
+- Визуальный радиус сферы увеличен `1.3→1.9` радиуса монеты, детализация геометрии повышена.
+- Ракета бластера ускорена `34→48 м/с`, дальность увеличена `85→100 м`, визуальный масштаб —
+  `1.65×`, пульс усилен. Свет ракеты стал ярче и шире, сила разлёта попадания `2.2→3.4`.
+- На разгоне коня выше `horseMomentum 0.70` будущая генерация плавно смягчается. На максимуме:
+  action-шанс ×0.82, обязательное перекрытие всех полос ×0.78, follow-up после прыжка ×0.70;
+  шанс короткой передышки слегка растёт. Трасса остаётся наполненной, но максимальная скорость
+  меньше перегружает игрока.
+- Боковой крен камеры в подкате усилен `0.14→0.20 рад`, направления левых и правых полос сохранены.
+- Проверки: typecheck ✓, lint ✓, unit **227/227** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.3ms, avg_fps 54, avg_draws 63, max_draws 71).
+
+#### Horse-playtest 4: поездной бонус, групповой бластер и палитра Дикого Запада
+
+- Исправлена неподбираемая сфера у конца поезда: раньше к ней ошибочно применялась формула
+  ramp-полёта с уже накопленным `airTime`, поэтому предмет перескакивал за игрока. Теперь сфера
+  имеет `trainId/trainOffsetZ`, находится на крыше впереди персонажа, движется вместе с поездом
+  и удаляется с ним только при пропуске. Регрессионный тест подтверждает фактический подбор.
+- Первый horse-бонус разрешён с 30-й секунды вместо 50-й; вероятности ramp/train не изменены.
+- Beat-бластер стреляет немного чаще (`cooldown 1.25→0.90 с`) и быстрее (`48→64 м/с`). Попадание
+  в obstacle с `actionGroupId` теперь одновременно разрушает всю доступную группу во всех полосах;
+  одиночный объект по-прежнему разрушается один.
+- В 65% jump-групп над каждым низким препятствием размещается монета на высоте 1.65 м. С земли
+  она не собирается и визуально мотивирует перепрыгнуть ряд. Если группа переносится ради честного
+  интервала после подката, связанные с ней монеты переносятся/удаляются вместе с ней.
+- Режим коня получил отдельную тёплую желтовато-коричневую палитру: за 2 секунды плавно меняются
+  небо, туман, ambient-свет, земля, разделители полос и дорожные штрихи; возврат к машине столь же
+  плавно возвращает исходную холодную палитру.
+- Препятствия с нижним проёмом (`overhead`) теперь оранжевые, включая полупрозрачное состояние
+  активной slide-группы и оранжевые осколки после успешного разрушения.
+- Проверки: typecheck ✓, lint ✓, unit **228/228** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.6ms, avg_fps 57, avg_draws 63, max_draws 71).
+
+#### Horse-playtest 5: защитный бластер, читаемые действия и отзывчивый прыжок
+
+- Автоматическая ракетница заменена защитным зарядом. Он появляется раньше — при
+  `horseMomentum ≥ 0.70` (обычно после пяти чистых action-групп), окрашивает коня в ярко-голубой,
+  усиливает эмиссию, контур и прикреплённый свет.
+- Первое столкновение при активном заряде полностью поглощается: нет урона, штрафа, сброса комбо
+  или неудачи прыжка. Все препятствия в 18-метровом радиусе по всем полосам получают мощный
+  smash-взрыв (`strength 5`), после чего заряд отключается на 8 секунд.
+- Кулдаун идёт независимо от momentum, но восстановленный заряд виден только выше порога скорости.
+  Если конь замедлился за время кулдауна, повторный разгон мгновенно возвращает готовую защиту.
+  Остаточные поездные препятствия также поглощаются; дорожное столкновение с поездом расходует
+  заряд и убирает состав без повреждения персонажа.
+- Обычные horse-монеты значительно прорежены: ground-шанс `0.45→0.14`, в rest-чанках монета
+  остаётся только в каждом третьем ряду. Монетные линии над low jump-группами сохранены полностью.
+- На каждом overhead-препятствии добавлена яркая объёмная стрелка вниз. Для тёплой horse-палитры
+  low, tall и overhead получили отдельные более светлые высококонтрастные цвета и эмиссию.
+- Near-ground chain-jump стал мгновенным: на нисходящей дуге при высоте до 0.55 м новое нажатие
+  сразу начинает следующий прыжок и честно завершает предыдущий clear; более раннее нажатие
+  по-прежнему хранится в jump-buffer. Крен камеры подката усилен `0.20→0.28 рад`.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы с защитной механикой.
+- Проверки: typecheck ✓, lint ✓, unit **229/229** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.3ms, avg_fps 54, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 6: читаемый куб, устойчивые ряды и связка двух поездов
+
+- Куб машины в horse-прыжке перенесён с 50% на 72% дуги: после появления у игрока примерно
+  на 44% больше времени на реакцию. Его размер увеличен `2.2→3.2 coinRadius`, эмиссия усилена
+  до 3.2, добавлены заметная пульсация и вращение по трём осям; высота следует реальной дуге.
+- Минимальный интервал между любыми сменами режима слегка увеличен `22→25 с`. Раньше ограничение
+  работало только для `horse→car`; теперь оно симметрично блокирует и слишком раннее новое
+  предложение коня после возврата в машину. Первый конь по-прежнему доступен после 30 с песни.
+- Нечитаемые car-фрагменты на стыках полос уменьшены без отмены lane-flow: одиночные препятствия
+  сохраняют 100% скорости своей полосы, а элементы одного сгенерированного поперечного ряда —
+  25% межполосной разницы. Ряды немного деформируются, но гораздо реже распадаются в щели,
+  требующие почти невозможного попадания между объектами.
+- При создании второго поезда поздняя монетная линия первого обрезается перед гарантированным
+  высоким препятствием. Монеты продолжаются с задней части второго состава, а препятствие
+  приходит уже после открытия transfer-окна: игроку предлагается перейти на соседнюю крышу
+  либо заранее сойти на дорогу. Независимые таймеры и возврат на первый поезд сохранены.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы с новыми контрактами.
+- Проверки: typecheck ✓, lint ✓, unit **230/230** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 7: ready-nitro защита и новый язык horse-препятствий
+
+- Полностью заполненное, но не активированное нитро машины теперь автоматически срабатывает при
+  столкновении с разрушаемым low: урон и штраф отменяются, нитро включается, а все разрушаемые
+  low в радиусе 16 м получают smash-взрыв `strength 4.5`. Tall/unbreakable и частичная шкала
+  защиту не активируют; отдельный тест подтверждает обе стороны контракта.
+- Car-генерация слегка смягчена без удаления динамических систем: `baseDensity 0.38→0.36`,
+  `twoObstacleBias 0.64→0.58`. Lane-flow, музыкальная дельта, ранний трафик, стены, рампы,
+  нитро-челленджи и длинный рост сложности сохранены.
+- В horse-профиле 16% обычных action-чанков заменяются красным `horseDodgeOnly`-рядом на 2–3
+  полосах. Такой объект коллизионно непроходим прыжком и подкатом, всегда оставляет свободный
+  объезд и разрушается защитным бластером.
+- Все новые horse-препятствия используют pooled `RoundedBoxGeometry`, тогда как дошедший car-хвост
+  остаётся кубическим. На jump-low добавлена неброская светлая стрелка вверх; overhead сохраняет
+  яркую стрелку вниз. Красные dodge-only осколки также имеют красный цвет.
+- Horse-сфера увеличена `1.9→2.8 coinRadius`, усилены эмиссия, пульсация и вращение. Поездной
+  предмет создаётся при `rideRemaining 2.5 с`, но закреплён в точке встречи за 0.4 с до конца:
+  он виден примерно за 30+ метров на тестовой попутной полосе и остаётся физически собираемым.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **233/233** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.4ms, avg_fps 55, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 8: более короткие horse-этапы
+
+- Для выхода `horse→car` введён отдельный `carBonusMinSeconds: 20`: куб машины теперь может
+  появиться на первом подходящем большом прыжке уже после 20 с в режиме коня. Вероятность такого
+  события увеличена `0.70→0.82`; гарантия следующего подходящего события после 65 с сохранена.
+- Обратное предложение `car→horse` по трамплину или поезду по-прежнему использует 25-секундный
+  интервал, поэтому сокращение horse-отрезка не учащает немедленное переключение обратно.
+- Стрелка вверх на низких horse-препятствиях стала заметнее: повышены яркость, эмиссия и
+  непрозрачность, но она остаётся спокойнее обязательного маркера подката.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **233/233** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 9: мягкий планировщик и измеримый баланс
+
+- Шанс кубика машины теперь плавно растёт: 0 до 20 с horse-режима, 0.82 на 20-й секунде,
+  0.91 на 26-й и гарантия на первом подходящем большом прыжке после 32 с. Это уменьшает разброс
+  длительности формы, сохраняя событийное, а не таймерное появление предмета.
+- `RunStats` и экран результатов показывают время в машине/коне, число переходов, сколько раз
+  предлагались и собирались 🐎/🚗, успешные horse-прыжки/подкаты, удары, активации нитро,
+  спасения бластером и максимальный разгон коня.
+- Массовая проверка 96 сочетаний seed, плотности и horseMomentum обнаружила до трёх полностью
+  пустых horse-чанков подряд. Генератор теперь ограничивает серию двумя: следующим создаётся
+  спокойный боковой участок с монетами. Все проверенные последовательности остаются проходимыми.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **235/235** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 10: ускорение к финалу и активные horse-передышки
+
+- Начиная с 65% фактической длительности песни окно смен форм плавно сжимается. К финалу
+  минимальный интервал в обоих направлениях достигает 10 с, гарантия предложения на следующем
+  подходящем событии — 18 с, а шансы ramp/train/jump стремятся к 100%. Физический подбор
+  предмета по-прежнему обязателен.
+- `GameSim` получает только числовой прогресс трека через callback. Запись реплея сохраняет
+  длительность песни, поэтому поздняя кривая воспроизводится детерминированно.
+- Ложная монетная пустота убрана: rest-вероятность снижена `0.16→0.10`; безопасная монетная
+  дорожка остаётся на обочине, но остальные три полосы содержат простую прыжковую группу.
+- Доля подкатов снижена `0.38→0.30`, поэтому прыжки заметно преобладают без повышения общей
+  вероятности action-чанка.
+- Предмет-сфера коня перекрашен из розового в ярко-голубой, эмиссия усилена.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **236/236** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.3ms, avg_fps 54, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 11: возврат красных объездов и простые поздние трамплины
+
+- Dodge-only вероятность поднята `0.16→0.18`. Дополнительно `dodgeOnlyMaxGapChunks: 6`
+  принудительно создаёт красную секцию после шести horse-чанков без неё, поэтому серия больше
+  не может исчезнуть из забега из-за случайного seed. Перекрываются 2–3 полосы, объезд остаётся.
+- На трамплине, который в поздней части песни уже может предложить коня, шанс поезда плавно
+  снижается до множителя 0.60. В результате car→horse чаще предлагается в простом ramp-полёте;
+  поездные события вне подходящего окна mode-бонуса сохраняют прежнюю вероятность.
+- Добавлены массовая проверка максимального промежутка dodge-only по 32 seed и тест кривой
+  позднего train-множителя.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **237/237** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 12: дорожная сфера и более частый финал
+
+- Добавлена редкая музыкально-событийная сцена `horseRoadTransition`. При входе в `cooldown`
+  пять монет ведут машину через два последовательных перестроения; остальные три полосы каждого
+  ряда заняты разрушаемыми low, а голубая сфера завершает полностью очищенный коридор.
+- Дорожная сфера использует общий cooldown mode-бонусов, не дублирует ramp/train-сферу и требует
+  физического сбора. Базовый шанс подходящего события — 0.18, к финалу он плавно растёт до 0.45.
+- Поздняя гарантия следующего подходящего mode-события сокращена `18→16 с`; минимальный интервал
+  10 с сохранён. Вместе с приоритетом простых трамплинов это немного учащает обе смены формы,
+  особенно `car→horse`, без автоматического переключения.
+- Добавлен интеграционный тест геометрии дорожного коридора: монетная полоса свободна в каждом
+  ряду, три соседние перекрыты, сфера стоит после последней монеты.
+- `docs/update1-design.md` и `docs/update1-plan.md` синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **238/238** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.5ms, avg_fps 55, avg_draws 63, max_draws 71).
+
+#### Horse/car-playtest 13: красные объезды, надёжная дорожная сфера и сохранение скорости рампы
+
+- Horse-профиль смещён к перестроениям: вероятность красной dodge-only секции повышена
+  `0.18→0.24`, а принудительный максимум паузы сокращён `6→5` чанков. Доля overhead-подкатов
+  одновременно снижена `0.30→0.25`, поэтому общая нагрузка не растёт столь же резко.
+- Отсутствие дорожной сферы оказалось не ошибкой коллизии, а слишком узким условием генерации:
+  сцена могла проверяться только при входе в `cooldown`. Теперь она доступна в `peak` и
+  `cooldown`; базовый шанс поднят `0.18→0.35`, финальный — `0.45→0.75`. Коридор и физический
+  подбор сферы сохранены.
+- Поздняя кривая обоих направлений начинается с 55% песни вместо 65%, а гарантия следующего
+  подходящего предложения сокращена `16→13 с`. Жёсткий нижний интервал 10 с остаётся, поэтому
+  даже в финале переключения не превращаются в мельтешение.
+- Одиночные трамплины немного прорежены (`rampProbability 0.03→0.025`). После рампового полёта
+  ускорение больше не обрывается при касании дороги: остаточный множитель плавно затухает за 6 с.
+- Конфиги, Zod-схема, fallback, unit-тесты и проектная документация синхронизированы.
+- Проверки: typecheck ✓, lint ✓, unit **238/238** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 20.5ms, avg_fps 53, avg_draws 63, max_draws 71).
+
+#### V22, этап 0: каркас музыкальных сцен и отладочная читаемость — ожидает приёмки
+
+- Существующие заранее планируемые музыкальные паттерны получили отдельную telemetry-карточку:
+  тип сцены, фазу/причину, время до встречи, lead-distance, предполагаемые полосы маршрута,
+  тип маршрута и резерв для будущего битового «эхо».
+- `GameSnapshot` несёт immutable-копию этой карточки; она живёт до трёх секунд после расчётной
+  встречи с событием и сбрасывается при рестарте. Поэтому запись/воспроизведение сохраняет ту же
+  последовательность сцен при одинаковых seed, музыке и вводе.
+- F3 показывает строку `scene`: например `peakGate phase:buildUp in 4.2s route ramp [2] echo none`.
+  Баланс, скорость и генерация на этом этапе намеренно не менялись.
+- Добавлены unit-тесты route-label и telemetry buildUp-сцены.
+- Проверки: typecheck ✓, lint ✓, unit **239/239** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.7ms, avg_fps 55, avg_draws 63, max_draws 71).
+
+#### V22, этап 1: Music Director 2.0 — ожидает приёмки
+
+- Музыкальный множитель скорости теперь имеет нижнюю границу x1.0. Calm и cooldown больше не
+  назначают скорость ниже базовой; спад фазы снимает пиковый ускоритель плавным существующим
+  easing, но не отнимает базовый темп игрока.
+- В `game.musicScenes` добавлены tunables: время прибытия сцены 2.4–4.0 с, общий кулдаун 6 с и
+  порог восходящей энергии 0.08. Музыкальные паттерны переводятся в фактическую lead-distance
+  по текущей скорости, поэтому F3 показывает честное время встречи.
+- Сцена теперь может ставиться не только на смене фазы, но и на сильном восходящем бите при
+  buildUp/intense/peak/cooldown. Общий кулдаун защищает трассу от потока крупных событий.
+- Добавлен unit-тест восходящего бита без смены фазы и обновлены проверки новой политики скорости.
+- Проверки: typecheck ✓, lint ✓, unit **240/240** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.7ms, avg_fps 55, avg_draws 67, max_draws 75).
+
+#### V22, этап 2: язык монет и битовые «эхо» — ожидает приёмки
+
+- Битовые «эхо» отключены по итогам плейтеста (`echoChance: 0`). Реализация безопасного
+  бокового дубликата рампы сохранена в коде, но пока не участвует в игре: в текущей динамике
+  эффект недостаточно ясно считывался как реакция на музыку. Вернуться к нему стоит вместе
+  с более выраженными музыкальными сценами или турбо-сценами, а не поднимать вероятность.
+  Монеты исключены из эха: сильный бит усиливает только заметные рампы или поезда. Их копии
+  за 0.5–0.65 с визуально выезжают в соседнюю полосу из исходного объекта, а не возникают
+  мгновенно.
+- Обычные монеты больше не полностью случайны: после ряда препятствий с вероятностью 0.42 монета
+  ставится на реально свободную полосу как мягкий `safeGuide`. В монетных чанках с вероятностью
+  0.28 возникает выбор из безопасной и рискованной монеты; остальные монеты сохраняют прежнее
+  смещение к встречной риск-полосе, поэтому подсказки не решают трассу за игрока.
+- Музыкальные сцены теперь размечают монеты как `sceneGuide`: calm — спокойная линия, buildUp/
+  peak — диагональный маршрут, intense slalom — редкие безопасные точки манёвра, ramp+wall —
+  короткая дорожка к рампе. Поверхность трассы очищается существующим контрактом сцен.
+- Сильный бит с энергией выше порога 0.65 иногда усиливает уже видимую позитивную сцену. Новые
+  tunables: шанс 0.20, общий кулдаун 8 с, минимум 2.4 с до встречи. Возможны параллельная ветка
+  монет, альтернативная рампа у музыкальной стены или второй поезд при достаточном времени на
+  крыше; путь не перекрывается и эффект не является обязательным.
+- Добавлен unit-тест альтернативной рампы на последующем сильном бите. Типы монет/рамп/поездов
+  несут metadata сцены без изменений коллизии или рендера.
+- Проверки: typecheck ✓, lint ✓, unit **241/241** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.3ms, avg_fps 57, avg_draws 67, max_draws 74).
+
+#### V22, этап 3: сегментированная шкала и Overdrive коня — принят
+
+- В horse-режиме вместо скрытого momentum показывается четырёхсегментная шкала. Первые два
+  сегмента отражают разгон, третий подписывается `SHIELD READY`, а полный четвёртый сегмент
+  автоматически включает голубой `OVERDRIVE` с таймером; шкала нитро машины в этот момент
+  скрыта.
+- Momentum по-прежнему растёт за успешные прыжки и подкаты. 8 успешных действий заполняют
+  шкалу строго целиком: ровно 2 действия на каждый из 4 сегментов. Дополнительно один шаг
+  даёт только полное взятие редкой монетной action-группы из двух и более монет; одиночные
+  монеты его не заполняют. Каждой группе можно получить награду лишь один раз.
+- Четвёртый сегмент даже пустым выделен голубым и заполняется частично, как остальные. При полном
+  заполнении он плавно расходуется 4.0 с до третьего сегмента, а не исчезает скачком.
+  Tunables: 4 сегмента, дополнительный множитель скорости +25%, щит/выход Overdrive на
+  momentum 0.75. Во время Overdrive существуют эффекты высокой скорости, а успешные разрушения
+  получают силу взрыва ×1.5; усилены FOV, свечение и speed-VFX.
+- Momentum коня больше не имеет пассивного расхода: падение скорости из-за Director/музыки,
+  ожидание и кулдаун щита не уменьшают заработанные сегменты. Потерять их можно только при
+  реальном ударе; отдельный расход действует исключительно на последний сегмент Overdrive.
+- Щит/бластер больше не возвращается по таймеру: защитное столкновение разрушает объекты вокруг,
+  но откатывает шкалу до второго сегмента (0.5). Чтобы вновь получить щит, нужны два новых
+  успешных действия. Во время Overdrive каждое успешное действие восполняет половину последнего
+  сегмента и продлевает его до максимальных 4 с.
+- Переход horse -> car сохраняет прежнюю честную связку: при momentum ≥ 0.75 машина получает
+  полный заряд и сразу активирует нитро, поэтому Overdrive не обрывается резким торможением.
+- Проверки: typecheck ✓, lint ✓, unit **244/244** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.4ms, avg_fps 55, avg_draws 67, max_draws 74).
+
+#### V22, этап 4: добровольные голубые ворота конь → машина — принят
+
+- В horse-режиме во время buildUp/intense/peak одна из ближайших (1.8–3.2 с) необязательных
+  подкатных групп с шансом 0.5 может получить голубой portal-вариант. Группа обязательно имеет
+  свободную полосу: игрок может объехать ворота и остаться конём. Одна группа рассматривается
+  только один раз, а появившийся портал блокирует конкурирующий куб машины.
+- Голубые ворота используют ту же понятную механику подката, что обычный overhead: проехать
+  под ними — плавно перейти в машину с действующими переносом скорости/здоровья/комбо; без
+  подката это обычное столкновение. Визуально портал — яркая cyan-арка с увеличенной стрелкой.
+- Старый путь перехода сохранён: куб машины появляется в большой horse-прыжковой группе.
+  Его обычный масштаб 3.2 восстановлен, а точка подбора сдвинута с 72% на 88% прыжковой дуги:
+  куб возникает дальше впереди и поэтому виден раньше, не становясь чрезмерно большим.
+- Добавлен unit-тест прохождения голубых ворот в подкате. Проверки: typecheck ✓, lint ✓,
+  unit **245/245** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 19.4ms, avg_fps 55, avg_draws 67, max_draws 74).
+
+#### V22, этап 5: турбо-сцены — принят
+
+- Прежний turbo, который давал только числовой множитель скорости, стал короткой музыкальной
+  сценой: 0.55 с плавного входа, 2.75 с кульминации и 0.7 с выхода. Его скорость, FOV, shake,
+  speed-lines и свечение теперь получают тот же envelope, поэтому эффект быстро набирается и
+  плавно отпускает, а не включается кадром.
+- На старте turbo очищается ближайшая рассчитанная область трассы и заменяется безопасной
+  трёхрядной постановкой, начинающейся через 1.45 с. В машине это две разрушаемые низкие
+  преграды на ряд и свободная/меняющаяся полоса: с нитро можно пробивать ряды, без него —
+  маневрировать. Монеты остаются лишь на двух из трёх безопасных точек.
+- У коня тот же drop создаёт три разнесённых ритмичных прыжковых ряда с монетами над ними.
+  Прыжки проходят через обычную систему успешных действий, поэтому реально ускоряют заполнение
+  Momentum/Overdrive, но не дают автоматическую неуязвимость.
+- Trigger по-прежнему требует высокого устойчивого роста энергии и ближайшего beat, а после
+  4.0-секундной сцены действует 10-секундный cooldown. Новые tunables находятся в `game.turbo`:
+  `entrySeconds`, `exitSeconds`, `sceneLeadSeconds`, `sceneRows`.
+- Добавлены unit-тесты состава car- и horse-сцен. Проверки: typecheck ✓, lint ✓,
+  unit **246/246** ✓, build ✓, e2e **2/2** ✓
+  (perf: avg_frame 18.9ms, avg_fps 56, avg_draws 67, max_draws 74).
+
+#### V22, этап 6: финальный плейтест и баланс — принят, V22 завершено
+
+- Пользовательский плейтест подтвердил целостность обновления: музыкальные сцены, язык монет,
+  сегментированная шкала коня, добровольные голубые порталы и турбо-сцены не требуют срочной
+  балансировки. Текущие вероятности, пороги и длительности оставлены без дополнительной
+  корректировки.
+- Битовые «эхо» рамп остаются отключёнными (`musicScenes.echoChance: 0`): эффект сохранён как
+  экспериментальный код, но не входит в принятую игровую петлю, поскольку недостаточно ясно
+  читался как музыкальная реакция.
+- V22 считается завершённым. Следующий этап следует выбирать как новое самостоятельное
+  обновление, а не продолжение текущего scope.
+
+## История
+
+### M4 — Debug/QA/playtest gate — ЗАВЕРШЕНА (принята после исправления реплея)
+
+#### Выполнено
+
+- **e2e smoke (Playwright)**:
+  - `@playwright/test` + chromium (devDependency + установлен браузер).
+  - `playwright.config.ts`: webServer на `npm run build && npm run preview` (порт 4173), проект chromium.
+  - `e2e/smoke.spec.ts`: страница грузится, canvas виден, игра идёт (distance растёт), F3 переключает оверлей, нет ошибок консоли.
+  - `e2e/perf.spec.ts`: проб производительности — сэмплирует frame/fps/draw calls/объекты из оверлея.
+  - Скрипт `npm run test:e2e`.
+- **Replay в UI**: клавиши `R` (запись: тап в `consumeInput`/`getMusic`, старт с рестартом и фиксацией seed) и `Shift+R` (воспроизведение: `ReplayRunner.run` → снапшоты → прогон через `scene.update`/`hud`); индикатор `replay: rec|play` в оверлее; live-sim ставится на паузу во время воспроизведения.
+- **DebugOverlay**: уважает флаги `overlay.showFps/showStates/showIntents` из `debug.default.json`; добавлены `draws` (геттер `GameScene.drawCalls` из `renderer.info`), `objects` (препятствия+монеты в буфере), `replay`.
+- **Performance-аудит (§9/§13)**: замер headless chromium — avg frame ~17 мс (60 fps), avg draws ~57 (<100 бюджет), объектов в буфере ~32 (видимо на экране кратно меньше). Бюджет §9 в норме, правок рендера не потребовалось.
+- **Баланс-проб (диагностический, удалён)**: idle при Passthrough-конфиге умирает на первой стене ~7с/59м; в реальной игре старт мягче (фаза calm: obstacleDensity 0.3, speed 0.85). Тюнинг — по playtest-ощущениям пользователя.
+- **Тесты**: unit 59/59, e2e 2/2.
+
+#### Исправления по итогам playtest (запись/воспроизведение реплея)
+
+Playtest показал, что воспроизведение сломано: вводы не проигрывались, картинка «кривая»/ускоренная, иногда сразу смерть. Найдено и исправлено:
+
+1. **Вводы записывались в «настенном» времени** (`performance.now()`), а проигрывались в игровом (`ms` от 0) → ни один ввод не воспроизводился, игрок в реплее умирал на первой стене. Исправлено: запись через `sim.playerSim.state.gameTime * 1000` (игровое время) в `bootstrap.ts`; в `ReplayRunner` часы теперь `tick.t * 1000` (бит-в-бит совпадает с игровым временем).
+2. **Скорость воспроизведения зависела от Гц монитора** (по снапшоту на кадр). Исправлено: индекс = `floor(прошедшие_секунды * 60)` от `startedAt`, скорость 1× на любом мониторе.
+3. **Снапшоты в `ReplayRunner` были алиасами** на изменяемые массивы сима → все кадры показывали финальное состояние. Исправлено: `structuredClone` каждого снапшота.
+4. **Окончание реплея**: после последнего снапшота — чистый рестарт (по решению пользователя), без «выпрыгивания» в замороженную игру.
+5. **Смерть во время записи**: запись авто-останавливается с тостом `replay recorded` (по решению пользователя), реплей честно показывает смерть.
+6. **Добавлен интеграционный тест** связки live-запись (игровое время) → ReplayRunner: траектория реплея 1:1 совпадает с live.
+
+#### Решения в рамках M4
+
+1. **Replay выведен в UI** (R / Shift+R) — как playtest-инструмент; детерминизм подтверждён unit-тестами.
+2. **e2e не трогает аудио** — в headless нужен жест пользователя; smoke проверяет только запуск/ран/canvas/оверлей.
+3. **Perf-проб не упирается в жёсткие бюджеты §13** в headless (SwiftShader ≠ реальный GPU) — assert’ы мягкие (frame<50ms, draws<400), точные замеры — ручные на железе пользователя.
+4. **Запись вводов — в игровом времени**, воспроизведение — по реальным секундам (не привязано к Гц монитора).
+5. **Смерть во время записи** — авто-остановка записи; **конец реплея** — рестарт в чистое состояние.
+
+#### Проверки M4
+
+- `npm run typecheck` ✓, `npm run lint` ✓, `npm run test` — 59/59 ✓, `npm run build` ✓, `npm run test:e2e` — 2/2 ✓.
+
+### M3 — Первые реакции мира — ЗАВЕРШЕНА (принята пользователем)
+
+- **Активный Director** (`src/core/director/`): TransitionScorer (distance-to-center по weighted scoring), ConstraintValidator (только соседние переходы, hysteresisUp/Down, peak-гейт по minSecondsBetweenMajorEvents, down-переход только если целевая фаза заметно лучше), DirectorStateMachine (FSM calm→buildUp→intense→peak→cooldown + кулдауны + принудительные переходы), DirectorMemory (ring buffer интентов).
+- **Интенты** `speed`/`vfxIntensity`/`obstacleDensity` влияют на мир; easing у потребителей (PlayerSim, GameScene).
+- **State Recorder + Replay** (`src/core/replay/`): Recorder/Runner, детерминизм подтверждён тестами.
+- **Тюнинг связи музыка↔движение**: адаптивная нормировка энергии/яркости; секционная энергия (атака 0.4с/спад 2с) для скоринга и speed/density/coins (vfx — на быстрой); асимметричный easing (1.2/0.5) + speedFloor 0.8; rampPerSecond 0.12; усилен визуал (туман, bgGlow, эмиссия, FOV).
+- **Аудио-сессия/загрузка**: AudioSession.isPlaying, автозапуск после загрузки, рестарт уровня, neutralMusic до старта.
+- **Тесты**: 58/58.
+
+### M2 — Аудио-пайплайн — ЗАВЕРШЕНА (принята пользователем)
+
+- **Анализ** (`src/audio/analysis.ts`): свой radix-2 FFT (bit-reversal + butterflies), окно Ханна, взвешенный по мощности спектральный центроид, RMS (время), spectral flux. Центроид точен (440 Гц синус → 440.0).
+- **Worklet** (`src/audio/analyzer-processor.worklet.ts`): накапливает fftSize сэмплов → `computeAnalysis` → `postMessage({t, rms, spectralCentroid, spectralFlux})`; ambient-декларации `AudioWorkletProcessor`/`registerProcessor`.
+- **MusicStateBuilder** (`src/core/state/MusicStateBuilder.ts`): EMA-энергия (attack/release), бит (адаптивный порог mean + k·std + debounce + minInterval), тишина (порог + hysteresis exitFactor + minFrames + debounce), яркость (адаптивная min/max-нормализация центроида с EMA).
+- **Audio-слой**: `AudioSession` (фасад), `AudioGraph` (bus-разделение music/sfx, master DynamicsCompressor), `VideoFileAudioSource` (createMediaElementSource, НЕ muted — только GainNode, §6.8), `AudioWorkletAnalyzer` (addModule через `?url`).
+- **UI**: `AudioControls`, `DebugOverlay` (F3), `EventTimeline` (T).
+- **Конфиги**: `audio.default.json` + schema/fallback (brightness, silence.exitFactor).
+- **Тесты**: 38/38.
+
+### M1 — Геймплей-ядро (без музыки) — ЗАВЕРШЕНА
+
+Input (адаптер + буфер), LevelGen (seed-PRNG, категории чанков, always-passable), Gameplay (PlayerSim/Collision/Score/GameSim), Director-каркас (FSM-скелет, PassthroughDirector), GameScene (follow-камера, пулы), HUD, конфиги. Исправлены: смерть на старте, камера «на игрока», прыжок (0.6с/1.9), дорога после смерти, инверсия управления (семантика в mergeActions). Тесты 31/31.
+
+## План: текущее состояние
+
+- S0, M0, M1, M2, M3, M4 — пройдены и приняты. Начальный план (§10) исчерпан.
+- Дальше — feel-обновления: «Здоровье/прощение + бит-пульс» реализованы (ждут playtest); генератор/компоновка объектов — отдельная итерация.
+- **UPDATE 1** (машина/конь/ракета): шаги 0–7 и короткая итерация цельного забега
+  реализованы и приняты; начато планирование шага 8 — базового режима коня. В них входят 2.1 (музыка→бонусы), 3 (трасса 4 полосы + зоны
+  риск/безопасно), 4 (нитро машины),
+  доработки нитро 4.1/4.2, «полосы-направления» (lane flow: [0,-6,12,0],
+  риск = встречка-полоса 2), «комбо: уклонения до нитро / сносы во время нитро»
+  и **шаг 5 (рампы тип 1 + воздух/трюки + красные стены)**. В шаге 5 рампы выше/дольше
+  (полёт 3 с, высота 8, буст 1.6×), гарантированный трамплин перед каждой стеной
+  на свободной полосе, свободные рампы встречаются чаще, камера следует по высоте,
+  трюки с кд 0.3 с; **шаг 6 реализован как поезда после обычных рамп**: точная посадка,
+  3–5 секунд безопасной крыши, ручной сход и безопасный автоматический конец.
+  **Текущее действие — пользовательский плейтест шага 8. После приёмки следующий шаг 9:
+  длинный прыжок, подкат и специальные глубокие/навесные препятствия.** План — `docs/update1-plan.md`, дизайн —
+  `docs/update1-design.md`.
+
+## Открытые вопросы / решения по ходу
+
+- Feel-итерация: playtest-приёмка «здоровье/прощение + бит-пульс»; тюнинг амплитуд пульса и grace по ощущениям. После первого playtest: небо пульсирует только на мощные биты (strongPulse), усилены полоски/баунс, самоускорение и реакция музыки — ждёт повторного playtest. После второго: убрана смена цвета в такт, кубы уже + баунс сильнее, монетки баунсят отдельно, ранение 8с, полоски ярче, пост-процессинг blur по краям, полоски скорости, FOV-kick+вибрация, турбо на активном эпизоде — ждёт playtest-приёмки. Третья итерация: виньетка вместо затемнения туманом, ветер-полоски, крен камеры, усиленный баунс — ждёт playtest-приёмки.
+- Генератор (Wish 3): паттерн-генерация уровня — отдельная итерация. (Гарантия проходимости через `minWallGapRows` + `isPassable` уже добавлена в предыдущей итерации.)
+- M4: расширение e2e при желании (например, проигрывание рекордера в headless).
+- `timingRewardWindow` как intent — открытый вопрос (§16 п.3).
+- BPM-метр в оверлей — решено НЕ добавлять.
+
+## Важные решения пользователя
+
+- Работаем в папке `Deepseek/` (одна папка проекта).
+- Без git на данном этапе.
+- S0 закрыта GO — связь музыки и движения ощущается.
+- M1: принята; инверсия управления чинится семантически (вариант B).
+- M2: свой FFT (не Meyda); кнопка выбора файла (не drag-and-drop); принята без BPM-метра.
+- M3: принята после циклов тюнинга связи музыка↔движение (нормировка, секционная энергия, асимметричный easing).
+- M4: Playwright ставим; Replay в UI (R/Shift+R); баланс — по playtest.
+- Feel-итерация: здоровье 4с таймер + 1с неуязвимость, без штрафа за удар; куб краснеет + рассыпание + тряска камеры; зелёная подсветка при восстановлении; статус здоровья только в оверлее; хитбоксы умеренно щадящие; пульс — фон/туман, ambient, объекты+монеты (emissive + scale по биту), полоски дороги + медленный hue-сдвиг по энергии; порядок работ 1+2 вместе, генератор отдельно.
+- Feel-тюнинг: небо пульсирует только на самые мощные биты (отдельный `strongPulse`, порог энергии 0.65); полоски/баунс/ambient на каждый бит, амплитуды подняты; самоускорение быстрее (ramp 0.2, max 30); реакция скорости/FOV на музыку сильнее (влияния 1.0, атака секционной энергии 0.25с).
+- Feel-итерация 2: смена цвета кубов в такт убрана (colorShift удалён); кубы уже (width 2.0) и баунс 0.2; монетки баунсят отдельно (coinsScale 0.3); ранение 8с; полоски на биты 0.85; размытие по бокам на скорости через пост-процессинг (EffectComposer, потолок blurMax); полоски скорости за персонажем + грани куба; FOV-kick + вибрация; турбо на активном эпизоде (порог энергии + sustain + duration + cooldown).
+- Feel-итерация 3: затемнение туманом на intense/peak заменено на виньетку (CSS-overlay, z-index 5); блюр только на турбо+скорости (в headless выключен — перф стабилен); полоски скорости переделаны в ветер с прокруткой и фейдом; крен камеры при смене полосы; баунс объектов 0.28 и монет 0.38.
+- Генератор: уклонений должно быть больше, чем вынужденных прыжков; простая реализация; проверка проходимости — ТОЛЬКО unit-тесты (без рантайм-кода/тостов/логов).
+- UPDATE 1: концепция в `update 1.txt`; не переходим к новой вехе — доводим MVP по одному шагу с приёмкой; жёсткий порядок машина→конь→ракета; старт с шага 0 (архитектура); прыжок машины убираем на шаге 4–5 (Space→нитро); по одному шагу с приёмкой.
+- UPDATE 1, шаг 2 (комбо): множитель прогрессивный `1 + floor(combo/5)` (5→×2, 10→×3); комбо НЕ сбрасывается при смене режима (только при уроне/ошибке игрока) — контракт `ModeController` обновлён; уклонение = объект был в полосе игрока в окне опасности и прошёл за спину неразрушенным (в т.ч. перепрыгивание); визуал — HUD-счётчик + рост свечения граней.
+- UPDATE 1, шаг 2, очки: по решению пользователя очки = только монеты × 10 × множитель комбо; дистанция очков не даёт (отображается отдельно в HUD).
+- UPDATE 1, шаг 2.1 (музыка→бонусы): объём шага — только размещение + сбор (без смены режима при подборе); размещается 🐎 (не 🚀 — её плейсмент на шаге 12); триггер — вход в buildUp; спавн напрямую в GameSim (не через LevelGenerator) из-за горизонта генерации; кулдаун в дистанции.
+- UPDATE 1, шаг 3 (трасса 4 полосы + зоны риск/безопасно): 2 риск-полосы слева (0–1), 2 безопасных справа (2–3); визуальная подсказка риск-зоны НЕ делаем (отложено в шаг 15).
+- UPDATE 1, полосы-направления: полосы едут по-разному и это реально влияет на геймплей (полоса 0 = правая обочина, объекты стоят; 1 = попутка, догоняешь; 2 = встречка, летят навстречу; 3 = левая обочина, стоят); зона риска — только встречка (полоса 2); монеты/бонусы на скорости игрока; поток `[0, -6, +12, 0]`; стены расползаются — «всё разделяется».
+- UPDATE 1, комбо-источник: до нитро комбо растёт от уклонений, во время нитро — от сносов (+1 за разрушенное низкое препятствие); комбо сохраняется при включении/выключении нитро; удар по красным (tall) сбрасывает комбо; за рост комбо во время нитро доп. заряд НЕ даётся (только gainPerSmash); фидбек — метка SMASH.
+- UPDATE 1, шаг 4 (нитро машины): клавиша нитро — стрелка вверх (прыжок на Space остаётся до шага 5, потом нитро уедет на Space, прыжок уберём); пролам — все препятствия, кроме высоких (tall — монолиты), объекты разлетаются с импульсом; формулы сразу: монета +2 (10 монет = 20%), уклонение +5×множитель комбо, риск-полоса +4/с, трата 25/с, буст `1 + 0.6·(заполнение/100)`, грас-период 0.1с без списания.

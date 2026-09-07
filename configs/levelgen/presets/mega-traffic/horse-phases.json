@@ -1,0 +1,34 @@
+{
+  "horse": {
+    "phasesEnabled": true,
+    "phaseMinChunks": 2,
+    "phaseMaxChunks": 4,
+    "phaseWeights": {
+      "corridor": 0.3,
+      "weave": 0.32,
+      "breather": 0.18,
+      "overdriveTease": 0.14
+    },
+    "waveMinChunks": 5,
+    "waveMaxChunks": 8,
+    "waveIntensityPeak": 0.68,
+    "longRunWeaveWeightBonus": 0.12,
+    "longRunOverdriveTeaseWeightBonus": 0.1,
+    "longRunBreatherWeightPenalty": 0.03,
+    "corridorActionScale": 1.02,
+    "corridorDodgeProbabilityScale": 1.38,
+    "corridorDodgeLaneStickiness": 0.86,
+    "weaveActionScale": 1.06,
+    "weaveSlideProbabilityBonus": 0.18,
+    "weaveFollowupScale": 1.15,
+    "weaveGroupSizeBonus": 0.2,
+    "breatherActionScale": 0.7,
+    "breatherRestChunkScale": 1.55,
+    "breatherGroundCoinScale": 1.15,
+    "overdriveTeaseActionScale": 1.06,
+    "overdriveTeaseMandatoryScale": 1.12,
+    "overdriveTeaseFollowupScale": 1.14,
+    "overdriveTeaseJumpCoinBonus": 0.06,
+    "overdriveTeaseGroupSizeBonus": 0.22
+  }
+}

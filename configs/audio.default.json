@@ -1,0 +1,29 @@
+{
+  "latencyOffsetMs": 40,
+  "fftSize": 512,
+  "blockSamples": 128,
+  "energy": {
+    "attackSeconds": 0.05,
+    "releaseSeconds": 0.3,
+    "minRiseSeconds": 5,
+    "maxFallSeconds": 10
+  },
+  "brightness": {
+    "attackSeconds": 0.1,
+    "releaseSeconds": 0.5,
+    "minRiseSeconds": 5,
+    "maxFallSeconds": 10
+  },
+  "beat": {
+    "thresholdK": 1.8,
+    "minIntervalMs": 150,
+    "rollingWindow": 43
+  },
+  "silence": {
+    "rmsThreshold": 0.02,
+    "minFrames": 20,
+    "debounceMs": 500,
+    "exitFactor": 2
+  },
+  "trackEndFadeSeconds": 10
+}

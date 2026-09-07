@@ -1,0 +1,17 @@
+{
+  "passiveDrainPerSecond": 6.3,
+  "drainRampSeconds": 44,
+  "drainStartScale": 0.42,
+  "idleLaneSeconds": 1.4,
+  "idleLaneDrainBonus": 2.05,
+  "rocketDrainMultiplier": 0.72,
+  "damagedThresholdPercent": 65,
+  "criticalThresholdPercent": 35,
+  "criticalNitroGainMultiplier": 1.9,
+  "gainSmash": 18,
+  "gainCoin": 0.8,
+  "gainNearMiss": 4.5,
+  "gainHorseJumpClear": 10,
+  "gainHorseSlideClear": 8,
+  "gainNitroBurst": 5
+}

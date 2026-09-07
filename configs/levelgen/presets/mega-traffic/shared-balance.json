@@ -1,0 +1,22 @@
+{
+  "segmentWeights": {
+    "obstacle": 0.53,
+    "coins": 0.36,
+    "bonus": 0.1,
+    "empty": 0.01
+  },
+  "coinRoutes": {
+    "obstacleGuideProbability": 0.58,
+    "riskChoiceProbability": 0.36
+  },
+  "longRunDifficulty": {
+    "delaySeconds": 28,
+    "rampSeconds": 180,
+    "maxDensityBonus": 0.065,
+    "maxMultiObstacleBiasBonus": 0.045
+  },
+  "riskZone": {
+    "obstacleWeight": 1.9,
+    "coinWeight": 3.25
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "twoObstacleBias": 0.58,
+  "nitroWallProbability": 0.42,
+  "nitroActiveFullRowProbability": 0.46,
+  "nitroReadyChallengeProbability": 0.18,
+  "nitroReadyMandatoryProbability": 0.16,
+  "nitroChallengeCooldownRows": 5
+}

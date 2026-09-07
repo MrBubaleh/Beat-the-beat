@@ -1,0 +1,17 @@
+{
+  "segmentWeights": {
+    "obstacle": 0.56,
+    "coins": 0.32,
+    "bonus": 0.1,
+    "empty": 0.02
+  },
+  "coinRoutes": {
+    "obstacleGuideProbability": 0.5,
+    "riskChoiceProbability": 0.42
+  },
+  "riskZone": {
+    "riskLanes": [2],
+    "obstacleWeight": 1.8,
+    "coinWeight": 3
+  }
+}
