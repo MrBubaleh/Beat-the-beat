@@ -10,7 +10,7 @@ export interface LevelIntroConfig {
 
 export const DEFAULT_LEVEL_INTRO: LevelIntroConfig = {
   countdownSeconds: 3,
-  moveDelaySeconds: 0.5,
+  moveDelaySeconds: 0.3,
   musicDelaySeconds: 1.5,
   obstacleMinSeconds: 2,
   obstacleMaxSeconds: 4,

@@ -1,5 +1,5 @@
 import { runEnvelope, MusicTimingMetrics, type MusicalPatternRequest, type MusicForecast } from './musicPlanning';
-import type { MusicPlacementContext } from '../levelgen/musicPlacement';
+import { withinRunEnvelope, type MusicPlacementContext } from '../levelgen/musicPlacement';
 import { SfxEventQueue } from '@core/sfx/SfxEventQueue';
 import type { SfxState } from '@core/sfx/types';
 import type { GameConfig, LevelgenConfig } from '@core/config/schemas';
@@ -15,7 +15,7 @@ import type {
 } from '@core/levelgen/types';
 import { carTrafficScrollSpeed } from '@core/levelgen/trafficMotion';
 import { LevelGenerator } from '@core/levelgen/LevelGenerator';
-import { findComfortableHorseRoute, isPassableAsCarTemporal } from '@core/levelgen/passability';
+import { findComfortableCarRoute, findComfortableHorseRoute, isPassableAsCarTemporal } from '@core/levelgen/passability';
 import {
   horseLeftoverGuideHorizonZ,
   planHorseToCarGuides,
@@ -87,10 +87,12 @@ import { adrenalineCoinGainMultiplier } from './adrenalineHealth';
 import { obstacleFootprint } from './obstacleFootprint';
 import {
   levelIntroEncounterSeconds,
+  levelIntroDistanceAtGo,
   levelIntroObstacleZ,
   levelIntroSpeedAt,
   levelIntroTargetSpeed,
 } from './levelIntro';
+import { buildIntroHook, type IntroHookContent } from './levelIntroHook';
 
 export interface GameSimOptions {
   musicPlanningEnabled?: boolean;
@@ -491,23 +493,97 @@ export class GameSim {
   }
 
   beginLevelIntro(): void {
-    if (this.rhythmEnabled) {
-      this.levelIntroActive = true;
-      this.levelIntroElapsed = 0;
-      return;
+    if (!this.rhythmEnabled) {
+      const introCfg = this.opts.game.levelIntro;
+      const speeds = this.opts.game.speeds;
+      const targetSpeed = levelIntroTargetSpeed(speeds.base, speeds.rampPerSecond, introCfg);
+      const encounter = levelIntroEncounterSeconds(this.generator.seed, introCfg);
+      const z = levelIntroObstacleZ(targetSpeed, encounter, introCfg);
+      const lane = this.playerSim.state.lane;
+      const obstacle = this.generator.spawnIntroBlockingObstacle(lane, z);
+      this.levelIntroObstacleId = obstacle.id;
+      this.levelIntroObstacleZ = z;
+      this.obstacles.push(obstacle);
     }
+    this.spawnIntroHook();
+    this.levelIntroActive = true;
+    this.levelIntroElapsed = 0;
+  }
+
+  /**
+   * Интро-крючок: детерминированная связка первых секунд (дорожка → выбор
+   * полосы → препятствие → двухходовка с наградой).
+   *
+   * Сертификация честная: маршрут проходим (препятствия), конверт держится,
+   * окно единственной обязательной смены полосы достаточное на всех скоростях.
+   * Монетки опциональны — их сбор не форсируется вейпоинтами (при разных
+   * потоках полос это было бы невыполнимо), но вовремя собранные дают
+   * бит-отклик и метрики. Уже видимое не трогаем.
+   */
+  private spawnIntroHook(): void {
+    const player = this.playerSim.state;
+    if (player.mode !== 'car') return;
     const introCfg = this.opts.game.levelIntro;
     const speeds = this.opts.game.speeds;
     const targetSpeed = levelIntroTargetSpeed(speeds.base, speeds.rampPerSecond, introCfg);
-    const encounter = levelIntroEncounterSeconds(this.generator.seed, introCfg);
-    const z = levelIntroObstacleZ(targetSpeed, encounter, introCfg);
-    const lane = this.playerSim.state.lane;
-    const obstacle = this.generator.spawnIntroBlockingObstacle(lane, z);
-    this.levelIntroObstacleId = obstacle.id;
-    this.levelIntroObstacleZ = z;
-    this.obstacles.push(obstacle);
-    this.levelIntroActive = true;
-    this.levelIntroElapsed = 0;
+    const hook = buildIntroHook({
+      startLane: player.lane,
+      lanes: this.levelgen.lanes,
+      speed: targetSpeed,
+      goDistance: levelIntroDistanceAtGo(targetSpeed, introCfg),
+      seed: this.generator.seed,
+      destroy: this.gameplayRules === 'destroy',
+      coinHeight: this.levelgen.coinHeight,
+      laneFlow: this.levelgen.laneFlow,
+    });
+    if (this.certifyIntroHook(hook, targetSpeed)) {
+      this.obstacles.push(...hook.obstacles);
+      this.coins.push(...hook.coins);
+    }
+  }
+
+  private certifyIntroHook(
+    hook: IntroHookContent,
+    targetSpeed: number,
+  ): boolean {
+    const context = this.rhythmPlacementContext();
+    if (!withinRunEnvelope(hook.obstacles, this.levelgen, context)) return false;
+    const speeds = new Set([targetSpeed, context.minSpeed, context.maxSpeed]);
+    for (let speed = context.minSpeed; speed < context.maxSpeed; speed += this.levelgen.fairness.speedSampleStep) {
+      speeds.add(speed);
+    }
+    const entryLane = this.playerSim.state.lane;
+    // Подготовка проверяется до скоростей встречи крючка (первые ~20 с),
+    // а не до позднего максимума: дальше этого контента уже нет на треке.
+    const prepMaxSpeed =
+      targetSpeed + this.opts.game.speeds.rampPerSecond * 20;
+    for (const speed of speeds) {
+      const route = findComfortableCarRoute(hook.obstacles, this.levelgen, [], {
+        playerSpeed: speed,
+        startLanes: [entryLane],
+      });
+      if (!route.passable) return false;
+      if (speed > prepMaxSpeed) continue;
+      // Подготовка к каждому увороту: последний подбор в той же полосе
+      // должен быть раньше с запасом решения. Одна полоса — порядок
+      // сохраняется на любой скорости (в отличие от межполосного).
+      const need =
+        this.levelgen.fairness.laneSwitchSeconds +
+        Math.max(this.levelgen.fairness.minDecisionSeconds, context.envelope.minReactionSeconds);
+      for (const hazard of hook.obstacles) {
+        if (hazard.broken) continue;
+        const hazardArrival =
+          hazard.z / carTrafficScrollSpeed(speed, hazard.lane, this.levelgen, hazard);
+        let prev = Number.NEGATIVE_INFINITY;
+        for (const coin of hook.coins) {
+          if (coin.lane !== hazard.lane || coin.collected) continue;
+          const arrival = coin.z / carTrafficScrollSpeed(speed, coin.lane, this.levelgen, coin);
+          if (arrival < hazardArrival - 1e-9 && arrival > prev) prev = arrival;
+        }
+        if (hazardArrival - prev < need) return false;
+      }
+    }
+    return true;
   }
 
   isLevelIntroActive(): boolean {
@@ -1254,6 +1330,11 @@ export class GameSim {
     if (!this.rhythmEnabled) {
       this.ensureChunks();
       this.reconcileLevelIntroObstacle();
+    } else {
+      // Ритм-прогноза во время отсчёта ещё нет, но базовые чанки генерируем
+      // сразу — иначе в GO весь мир появится одним кадром прямо перед носом.
+      // Фильтрация под музыку догонит следующие чанки, опубликованное неизменно.
+      this.ensureChunks();
     }
     if (this.levelIntroElapsed >= introCfg.countdownSeconds) {
       this.completeLevelIntro(targetSpeed, introCfg.countdownSeconds);
@@ -2462,7 +2543,7 @@ export class GameSim {
   }
 
   private ensureChunks(): void {
-    if (this.rhythmEnabled && !this.ghost && !this.rhythmForecast) return;
+    if (this.rhythmEnabled && !this.ghost && !this.rhythmForecast && !this.levelIntroActive) return;
     const distance = this.playerSim.state.distance;
     const chunkLength = this.levelgen.chunkLength;
     const currentChunk = Math.floor(distance / chunkLength);

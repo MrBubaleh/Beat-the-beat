@@ -12,7 +12,8 @@ import {
 describe('levelIntro', () => {
   it('ramps speed from zero after move delay', () => {
     expect(levelIntroSpeedAt(0, 10.78)).toBe(0);
-    expect(levelIntroSpeedAt(0.5, 10.78)).toBe(0);
+    expect(levelIntroSpeedAt(0.3, 10.78)).toBe(0);
+    expect(levelIntroSpeedAt(0.5, 10.78)).toBeGreaterThan(0);
     expect(levelIntroSpeedAt(3, 10.78)).toBeCloseTo(10.78, 4);
   });
 

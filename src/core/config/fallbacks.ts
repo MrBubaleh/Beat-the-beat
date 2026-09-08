@@ -22,7 +22,7 @@ export const configFallbacks: Configs = {
     },
     levelIntro: {
       countdownSeconds: 3,
-      moveDelaySeconds: 0.5,
+      moveDelaySeconds: 0.3,
       musicDelaySeconds: 1.5,
       obstacleMinSeconds: 2,
       obstacleMaxSeconds: 4,
