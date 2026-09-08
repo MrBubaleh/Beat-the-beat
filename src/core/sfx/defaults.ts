@@ -100,7 +100,7 @@ export const sfxFallback: SfxConfig = {
     "canister": {
       "bus": "pickup",
       "priority": 45,
-      "gain": 0.35,
+      "gain": 0.245,
       "attackMs": 5,
       "decayMs": 110,
       "tailMs": 130,
@@ -170,6 +170,30 @@ export const sfxFallback: SfxConfig = {
       "maxVoices": 2,
       "strengthGain": 0.1,
       "speedPitch": 0.06
+    },
+    "beat": {
+      "bus": "foley",
+      "priority": 35,
+      "gain": 0.16,
+      "attackMs": 2,
+      "decayMs": 45,
+      "tailMs": 70,
+      "bodyHz": 2100,
+      "endHz": 1900,
+      "filterHz": 6000,
+      "filterEndHz": 4000,
+      "q": 0.9,
+      "toneMix": 0.65,
+      "noiseMix": 0.1,
+      "partials": [
+        1,
+        2.02
+      ],
+      "jitterCents": 10,
+      "cooldownMs": 140,
+      "maxVoices": 1,
+      "strengthGain": 0.5,
+      "speedPitch": 0
     },
     "nitroReady": {
       "bus": "ability",

@@ -2447,7 +2447,7 @@ export class GameScene {
     const glow = t * (0.5 + 0.9 * this.speedNorm);
     this.dashMaterial.emissiveIntensity =
       glow + (this.switches.pulse ? p * ch.dashesEmissive : 0);
-    this.playerMaterial.emissiveIntensity = 0.3 + glow * 0.9 + this.beatLaunchPulse * 2.8;
+    this.playerMaterial.emissiveIntensity = 0.3 + glow * 0.9 + this.beatLaunchPulse * 2.8 + snapshot.beatHitPulse * 0.55;
 
     const blurIntensity = this.switches.blur
       ? this.postfxCfg.blurMax *

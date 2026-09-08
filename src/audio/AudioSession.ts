@@ -155,12 +155,11 @@ export class AudioSession {
     this.resetSfx();
     if (!this.ready || !this.source || !this.ctx) return;
     await this.resume();
-    this.source.rewind();
     this.lookahead.restart();
     this.clock?.restart();
     this.analyzer?.restart();
     this.setTutorialPlaybackScale(1);
-    await this.source.play();
+    await this.source.restart();
     this.playing = true;
     this.damageStressSmoothed = 0;
     this.nitroBoostSmoothed = 0;

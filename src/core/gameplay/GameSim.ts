@@ -15,7 +15,7 @@ import type {
 } from '@core/levelgen/types';
 import { carTrafficScrollSpeed } from '@core/levelgen/trafficMotion';
 import { LevelGenerator } from '@core/levelgen/LevelGenerator';
-import { isPassableAsCarTemporal } from '@core/levelgen/passability';
+import { findComfortableHorseRoute, isPassableAsCarTemporal } from '@core/levelgen/passability';
 import {
   horseLeftoverGuideHorizonZ,
   planHorseToCarGuides,
@@ -74,9 +74,11 @@ import {
   rocketCoinX,
   rocketCoinY,
   rocketDistanceAtTime,
+  rocketFallDurationSeconds,
   rocketFallStartTime,
 } from './rocket';
 import { planRocketLanding } from './rocketLanding';
+import { pickNearCue, pickStrongCue, quantizeStagedToBeat, snapBonusToStrongCue, snapHorseGroupAnchor } from './beatGrid';
 import { buildHitEvent, buildModeEvent } from '@core/playtest/buildEvents';
 import type { PlaytestEvent, ObstacleRef } from '@core/playtest/types';
 import type { DamageState } from './health';
@@ -138,6 +140,7 @@ export interface GameSnapshot {
   turbo: number;
   greenSmashFx: number;
   greenSmashStacks: number;
+  beatHitPulse: number;
   nitroMaxFill: number;
   nitroReady: boolean;
   nitroSmashVisual: number;
@@ -323,6 +326,8 @@ export class GameSim {
   private nitroDryPulseTimer = 0;
   private nitroDryCooldownTimer = 0;
   private prevRocketPhase: RocketPhase = 'none';
+  private beatHitPulse = 0;
+  private readonly beatCountedIds = new Set<number>();
   private laneStickSeconds = 0;
   private laneStickLane = 0;
   private laneCommitmentLane = 0;
@@ -542,6 +547,7 @@ export class GameSim {
       if (this.greenSmashStackTimer <= 0) this.greenSmashStacks = 0;
     }
     this.greenSmashFx = Math.max(0, this.greenSmashFx - dt * 2.8);
+    this.beatHitPulse = Math.max(0, this.beatHitPulse - dt / 0.22);
 
     const actions = this.opts.consumeInput(this.opts.nowMs());
     const input = this.guardApproachingTrainTransfer(
@@ -1010,6 +1016,7 @@ export class GameSim {
       comboMultiplier(this.comboSystem.combo, this.opts.game.combo),
     );
     if (this.rhythmEnabled) this.measureRhythmEvents();
+    if (this.rhythmEnabled) this.emitBeatHits();
     if (player.damageState !== 'normal') {
       this.woundedSeconds += dt;
     }
@@ -1060,6 +1067,8 @@ export class GameSim {
     this.greenSmashFx = 0;
     this.greenSmashStacks = 0;
     this.greenSmashStackTimer = 0;
+    this.beatHitPulse = 0;
+    this.beatCountedIds.clear();
     this.nearMissTracked.clear();
     this.dodgeTracked.clear();
     this.dodgeHitIds.clear();
@@ -1189,6 +1198,7 @@ export class GameSim {
       turbo: this.turbo,
       greenSmashFx: this.greenSmashFx,
       greenSmashStacks: this.greenSmashStacks,
+      beatHitPulse: this.beatHitPulse,
       nitroMaxFill: this.opts.game.nitro.maxFill,
       nitroReady: this.playerSim.nitroReady,
       nitroSmashVisual: this.playerSim.nitroSmashVisualStrength,
@@ -1662,9 +1672,37 @@ export class GameSim {
     const count = Math.floor((endSeconds - startSeconds) / spacingSeconds) + 1;
     const firstOffset = -train.length / 2 + train.landingInset + 2;
     const lastOffset = train.length / 2 - 2;
+    // Монеты крыши в такт: посадка на поезд — это конец рампового полёта,
+    // дальше время идёт 1:1 с поездкой. Только свежие спавны (не компаньоны).
+    const forecast = this.rhythmForecast;
+    const freshSpawn =
+      forecast &&
+      forecast.cues.length > 0 &&
+      train.landingDelay >= this.opts.game.ramp.flightTimeSeconds * 0.9;
+    const rate = forecast ? Math.max(0.25, forecast.rate) : 1;
+    const landingTrack = forecast
+      ? forecast.now + this.opts.game.ramp.flightTimeSeconds * rate
+      : 0;
     for (let i = 0; i < count; i++) {
       const progress = count === 1 ? 0.5 : i / (count - 1);
-      const offset = firstOffset + (lastOffset - firstOffset) * progress;
+      let offset = firstOffset + (lastOffset - firstOffset) * progress;
+      let musicTarget: CoinEntity['musicTarget'];
+      if (freshSpawn && forecast) {
+        const cue = pickNearCue(
+          landingTrack + progress * train.rideDuration,
+          forecast.cues,
+          rate,
+          0.25,
+        );
+        if (cue) {
+          const snappedProgress =
+            (cue.time - landingTrack) / Math.max(train.rideDuration, 0.01);
+          if (snappedProgress >= 0 && snappedProgress <= 1) {
+            offset = firstOffset + (lastOffset - firstOffset) * snappedProgress;
+            musicTarget = { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'collect' };
+          }
+        }
+      }
       this.coins.push({
         id: this.nextAirCoinId--,
         lane: train.lane,
@@ -1673,6 +1711,7 @@ export class GameSim {
         collected: false,
         trainId: train.id,
         trainOffsetZ: offset,
+        ...(musicTarget ? { musicTarget } : {}),
       });
     }
   }
@@ -1795,7 +1834,31 @@ export class GameSim {
       this.trainRng() * Math.max(0, progressMax - progressMin);
     const startOffset = -train.length / 2 + train.landingInset;
     const travel = train.length - train.landingInset;
-    const offset = startOffset + travel * progress;
+    let offset = startOffset + travel * progress;
+    let musicTarget: ObstacleEntity['musicTarget'];
+    // Уворот на крыше — в крутой момент (даунбит/сильная фраза).
+    const forecast = this.rhythmForecast;
+    if (
+      forecast &&
+      forecast.cues.length > 0 &&
+      train.landingDelay >= this.opts.game.ramp.flightTimeSeconds * 0.9
+    ) {
+      const rate = Math.max(0.25, forecast.rate);
+      const landingTrack = forecast.now + this.opts.game.ramp.flightTimeSeconds * rate;
+      const cue = pickStrongCue(landingTrack + progress * train.rideDuration, {
+        cues: forecast.cues,
+        rate,
+        windowSeconds: 0.5,
+        strongStrength: this.opts.game.musicPlanning.roleStrongStrength,
+      });
+      if (cue) {
+        const snappedProgress = (cue.time - landingTrack) / Math.max(train.rideDuration, 0.01);
+        if (snappedProgress >= progressMin && snappedProgress <= progressMax) {
+          offset = startOffset + travel * snappedProgress;
+          musicTarget = { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'dodge' };
+        }
+      }
+    }
     this.obstacles.push({
       id: this.nextTrainObstacleId--,
       kind: 'tall',
@@ -1805,6 +1868,7 @@ export class GameSim {
       trainId: train.id,
       trainOffsetZ: offset,
       unbreakable: true,
+      ...(musicTarget ? { musicTarget } : {}),
     });
   }
 
@@ -2036,9 +2100,24 @@ export class GameSim {
     const cfg = this.opts.game.train;
     const count = 4;
     const pathId = this.nextAirPathId++;
+    // Съезд с поезда: монетки дуги — на ближайшие биты.
+    const forecast = this.rhythmForecast;
+    const rate = forecast ? Math.max(0.25, forecast.rate) : 1;
     for (let i = 0; i < count; i++) {
-      const progress = (i + 1) / (count + 1);
-      const targetTime = cfg.exitDurationSeconds * progress;
+      const baseProgress = (i + 1) / (count + 1);
+      let targetTime = cfg.exitDurationSeconds * baseProgress;
+      let musicTarget: CoinEntity['musicTarget'];
+      if (forecast && forecast.cues.length > 0) {
+        const cue = pickNearCue(forecast.now + targetTime * rate, forecast.cues, rate, 0.25);
+        if (cue) {
+          const snapped = (cue.time - forecast.now) / rate;
+          if (snapped > 0.1 && snapped < cfg.exitDurationSeconds) {
+            targetTime = snapped;
+            musicTarget = { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'collect' };
+          }
+        }
+      }
+      const progress = targetTime / cfg.exitDurationSeconds;
       this.coins.push({
         id: this.nextAirCoinId--,
         lane,
@@ -2050,6 +2129,7 @@ export class GameSim {
         collected: false,
         airPathId: pathId,
         airTargetTime: targetTime,
+        ...(musicTarget ? { musicTarget } : {}),
       });
     }
   }
@@ -2416,6 +2496,10 @@ export class GameSim {
       }
       this.generator.stageMusicBackground(this.obstacles, stagedObstacles, this.coins,
         [...this.ramps, ...stagedRamps], this.rhythmPlacementContext());
+      this.quantizeStagedObstacles(stagedObstacles);
+    }
+    if (this.rhythmEnabled && player.mode === 'horse' && this.rhythmForecast) {
+      this.quantizeStagedHorseGroups(stagedObstacles, stagedCoins);
     }
     if (player.mode === 'car') {
       const horizonObstacles = [...this.obstacles, ...stagedObstacles];
@@ -2580,6 +2664,181 @@ export class GameSim {
     }
   }
 
+  /**
+   * Квантование staged-препятствий машины на бит-сетку (пункт 1).
+   * Двигаем только ещё не опубликованное; затем сертифицируем весь горизонт.
+   * При провале сертификации оставляем исходный staged без изменений.
+   */
+  private quantizeStagedObstacles(stagedObstacles: ObstacleEntity[]): void {
+    const forecast = this.rhythmForecast;
+    if (!forecast || forecast.cues.length === 0) return;
+    const player = this.playerSim.state;
+    const snapped = quantizeStagedToBeat(stagedObstacles, this.obstacles, {
+      cues: forecast.cues,
+      now: forecast.now,
+      rate: Math.max(0.25, forecast.rate),
+      playerSpeed: Math.max(player.speed, 1),
+      config: this.levelgen,
+      windowSeconds: this.opts.game.musicPlanning.quantizeWindowSeconds,
+    });
+    const horizon = [...this.obstacles, ...snapped];
+    if (
+      this.generator.certifyMusicCandidate(
+        horizon,
+        this.coins,
+        this.ramps,
+        this.rhythmPlacementContext(),
+      )
+    ) {
+      stagedObstacles.splice(0, stagedObstacles.length, ...snapped);
+    }
+  }
+
+  /**
+   * Конные группы на сетку: якорь обязательной прыжковой группы тянется к фразе,
+   * остальные группы — к ближайшему биту. Двигаем только staged, целой группой
+   * (внутренние интервалы сохраняются), затем проверяем конным маршрутом.
+   * При провале группа откатывается. Якорям и монетам группы ставим musicTarget
+   * для бит-отклика.
+   */
+  private quantizeStagedHorseGroups(
+    stagedObstacles: ObstacleEntity[],
+    stagedCoins: CoinEntity[],
+  ): void {
+    const forecast = this.rhythmForecast;
+    if (!forecast || forecast.cues.length === 0) return;
+    const player = this.playerSim.state;
+    const speed = Math.max(player.speed, 1);
+    const window = this.opts.game.musicPlanning.quantizeWindowSeconds;
+    const minSeparation = this.levelgen.minGapZ * 0.6;
+    const groups = new Map<number, ObstacleEntity[]>();
+    for (const obstacle of stagedObstacles) {
+      if (obstacle.actionGroupId === undefined || obstacle.trainId !== undefined) continue;
+      if (obstacle.broken || obstacle.cleared) continue;
+      const horseGroup =
+        obstacle.horseAction !== undefined ||
+        (obstacle.kind === 'tall' && obstacle.horseDodgeOnly);
+      if (!horseGroup) continue;
+      const list = groups.get(obstacle.actionGroupId) ?? [];
+      list.push(obstacle);
+      groups.set(obstacle.actionGroupId, list);
+    }
+    const taken: number[] = [];
+    for (const obstacle of this.obstacles) {
+      if (obstacle.trainId === undefined) taken.push(obstacle.z);
+    }
+    for (const obstacle of stagedObstacles) {
+      if (obstacle.actionGroupId === undefined || groups.has(obstacle.actionGroupId)) continue;
+      if (obstacle.trainId === undefined) taken.push(obstacle.z);
+    }
+    const ordered = [...groups.entries()].sort((a, b) => {
+      const tierOf = (members: ObstacleEntity[]): number => {
+        // Приоритет крупным и обязательным: увороты-tall и полные ряды идут
+        // первыми и забирают сильные биты.
+        if (members.every((member) => member.horseDodgeOnly)) return 0;
+        if (new Set(members.map((member) => member.lane)).size >= this.levelgen.lanes) return 0;
+        return 1;
+      };
+      return (
+        tierOf(a[1]) - tierOf(b[1]) ||
+        Math.min(...a[1].map((o) => o.z)) - Math.min(...b[1].map((o) => o.z))
+      );
+    });
+    for (const [groupId, members] of ordered) {
+      const sorted = [...members].sort((a, b) => a.z - b.z);
+      const anchor = sorted[0];
+      if (anchor.z <= 0) {
+        for (const member of sorted) taken.push(member.z);
+        continue;
+      }
+      const isDodge = sorted.every((member) => member.horseDodgeOnly);
+      const mandatory =
+        !isDodge &&
+        new Set(sorted.map((member) => member.lane)).size >= this.levelgen.lanes;
+      const planning = this.opts.game.musicPlanning;
+      // Упреждение: прыжок/подкат жмётся раньше встречи — препятствие приходит
+      // позже бита, тогда нажатие ложится точно в такт.
+      const lead = isDodge
+        ? planning.horseDodgeLeadSeconds
+        : anchor.horseAction === 'jump'
+          ? planning.horseJumpLeadSeconds
+          : planning.horseSlideLeadSeconds;
+      const snap = snapHorseGroupAnchor(anchor, {
+        cues: forecast.cues,
+        now: forecast.now,
+        rate: Math.max(0.25, forecast.rate),
+        playerSpeed: speed,
+        config: this.levelgen,
+        windowSeconds: isDodge || mandatory ? window * 1.6 : window,
+        mode: mandatory ? 'phrase' : isDodge ? 'strong' : 'any',
+        leadSeconds: lead,
+        strongStrength: planning.roleStrongStrength,
+      });
+      if (!snap || snap.z <= 0) {
+        for (const member of sorted) taken.push(member.z);
+        continue;
+      }
+      const delta = snap.z - anchor.z;
+      const anchorZ = anchor.z;      // Ряды атомарны: сдвинутая группа не должна сливаться ни с каким чужим
+      // рядом (иначе смешанный полный ряд убьёт конный маршрут). Проверка
+      // глобальная, по всем полосам.
+      const clashes = sorted.some((member) =>
+        taken.some((z) => Math.abs(z - (member.z + delta)) < minSeparation),
+      );
+      if (clashes) {
+        for (const member of sorted) taken.push(member.z);
+        continue;
+      }
+      for (const member of sorted) member.z += delta;
+      const groupCoins = stagedCoins.filter((coin) => coin.actionGroupId === groupId);
+      for (const coin of groupCoins) coin.z += delta;
+      const route = findComfortableHorseRoute(
+        [...this.obstacles, ...stagedObstacles],
+        this.levelgen,
+        0,
+        player.lane,
+      );
+      if (!route.passable) {
+        for (const member of sorted) member.z -= delta;
+        for (const coin of groupCoins) coin.z -= delta;
+        for (const member of sorted) taken.push(member.z);
+        continue;
+      }
+      // Метка хранит время ВСТРЕЧИ (бит + упреждение): отклик сравнивает её
+      // с моментом прохождения — тогда в окно попадает именно нажатие.
+      for (const member of sorted) {
+        if (member.z !== anchorZ + delta) continue;
+        member.musicTarget = {
+          time: snap.cue.time + lead,
+          cueId: snap.cue.id,
+          confidence: snap.cue.confidence,
+          role: isDodge ? 'dodge' : 'collect',
+        };
+      }
+      for (const coin of groupCoins) {
+        if (coin.musicTarget || coin.collected) continue;
+        let best: typeof snap.cue | null = null;
+        let bestError = Number.POSITIVE_INFINITY;
+        for (const cue of forecast.cues) {
+          const error = Math.abs(cue.time - (forecast.now + (coin.z / speed) * forecast.rate));
+          if (error < bestError) {
+            bestError = error;
+            best = cue;
+          }
+        }
+        if (best && bestError <= window * forecast.rate) {
+          coin.musicTarget = {
+            time: best.time,
+            cueId: best.id,
+            confidence: best.confidence,
+            role: 'collect',
+          };
+        }
+      }
+      for (const member of sorted) taken.push(member.z);
+    }
+  }
+
   private rhythmPlacementContext(): MusicPlacementContext {
     const player = this.playerSim.state;
     return { time: this.opts.getTrackTime?.() ?? player.gameTime, speed: Math.max(player.speed, this.opts.game.speeds.base),
@@ -2602,10 +2861,26 @@ export class GameSim {
       (duration <= 0 || request.cue.time < duration - this.levelgen.trackEndObstacleStopSeconds));
     if (!candidates.length) return;
     const context = this.rhythmPlacementContext();
-    const actionAllowed = earliest >= 5 && (this.rhythmSequence % 2 === 1 || candidates[0].kind === 'dodge');
+    const actionAllowed = earliest >= 5 && (this.rhythmSequence % 2 === 1 || candidates[0].kind === 'dodge' || candidates[0].kind === 'air');
+    // Воздушные связки — структурные события: ищем их в расширенном окне
+    // (посадка дальше maxLead), иначе collect-очередь сдвинет nextRhythmTime
+    // за посадку и окно закроется навсегда.
+    if (earliest >= 5) {
+      const airHorizon =
+        forecast.now +
+        (cfg.maxLeadSeconds + this.opts.game.ramp.flightTimeSeconds + 1) * rate;
+      for (const candidate of requests) {
+        if (candidate.kind !== 'air') continue;
+        if (candidate.cue.time < earliest || candidate.cue.time > airHorizon) continue;
+        if (candidate.cue.time > forecast.availableUntil) continue;
+        if (this.tryScheduleAirPattern(candidate, forecast, rate)) return;
+      }
+    }
     for (let attempt = 0; attempt < Math.min(3, candidates.length); attempt++) {
       const request = candidates[attempt];
-      const accents = request.accents.filter((cue, i, all) => cue.time <= forecast.availableUntil &&
+      // Неудавшийся air откатывается на обычный уворот на том же акценте.
+      const pattern = request.kind === 'air' ? { ...request, kind: 'dodge' as const } : request;
+      const accents = pattern.accents.filter((cue, i, all) => cue.time <= forecast.availableUntil &&
         (duration <= 0 || cue.time < duration - this.levelgen.trackEndObstacleStopSeconds) &&
         (i === 0 || cue.time - all[i - 1].time >= 0.28 * rate)).slice(0, 4);
       if (accents.length < 2) continue;
@@ -2673,6 +2948,193 @@ export class GameSim {
       this.timingMetrics.rejected++;
     }
     this.nextRhythmTime = candidates[0].cue.time + 0.3;
+  }
+
+  /**
+   * Воздушная связка (пункт 2): взлёт — на ближайший бит к (посадка − полёт),
+   * посадка с трюком — на сильную фразу, монеты полёта — на промежуточные биты.
+   * Не влезло безопасно — false, вызыватель откатывается на уворот.
+   */
+  private tryScheduleAirPattern(
+    request: MusicalPatternRequest,
+    forecast: MusicForecast,
+    rate: number,
+  ): boolean {
+    const player = this.playerSim.state;
+    const cfg = this.opts.game.musicPlanning;
+    const rampCfg = this.opts.game.ramp;
+    const flight = rampCfg.flightTimeSeconds;
+    const landing = request.cue;
+    const duration = this.opts.getTrackDuration?.() ?? 0;
+    if (duration > 0 && landing.time >= duration - this.levelgen.trackEndObstacleStopSeconds) {
+      return false;
+    }
+    const takeoffTarget = landing.time - flight;
+    const takeoffCue = forecast.cues
+      .filter((cue) => cue.time < landing.time && Math.abs(cue.time - takeoffTarget) <= 0.35)
+      .sort((a, b) => Math.abs(a.time - takeoffTarget) - Math.abs(b.time - takeoffTarget))[0];
+    if (!takeoffCue) return false;
+    const takeoffDelta = (takeoffCue.time - forecast.now) / rate;
+    // Взлёт должен быть в достижимом окне: хватит реакции, а рампа встанет
+    // в пределах видимого горизонта. Верхняя граница = maxLead: air заявляет
+    // окно раньше collect-очереди, иначе та сдвинет nextRhythmTime за посадку.
+    if (takeoffDelta < 1.2 || takeoffDelta > cfg.maxLeadSeconds) return false;
+    const landingDelta = (landing.time - forecast.now) / rate;
+    const mids = forecast.cues
+      .filter((cue) => cue.time > takeoffCue.time && cue.time < landing.time)
+      .slice(0, 6);
+    const times = [
+      takeoffDelta,
+      ...mids.map((cue) => (cue.time - forecast.now) / rate),
+      landingDelta,
+    ];
+    const lanes = [
+      player.lane,
+      ...Array.from({ length: this.levelgen.lanes }, (_, lane) => lane)
+        .filter((lane) => lane !== player.lane)
+        .sort((a, b) => Math.abs(a - player.lane) - Math.abs(b - player.lane)),
+    ];
+    for (const lane of lanes) {
+      const travel = this.playerSim.predictTravel(
+        times,
+        this.laneFlowFor(lane) * this.levelgen.multiLaneFlowFactor,
+        (seconds) => {
+          const time = forecast.now + seconds * rate;
+          const desired =
+            this.rhythmSpeedPlan.find((frame) => frame.time >= time)?.value ??
+            this.lastSpeedMultiplier;
+          return Math.min(desired, runEnvelope(time, duration, cfg).speedIntentCap);
+        },
+      );
+      const rampZ = travel[0];
+      if (rampZ < this.levelgen.minGapZ * 2) continue;
+      if (this.ramps.some((ramp) => Math.abs(ramp.z - rampZ) < this.levelgen.minGapZ * 1.5)) {
+        continue;
+      }
+      if (this.obstacles.some((obstacle) =>
+        !obstacle.broken &&
+        obstacle.trainId === undefined &&
+        obstacle.lane === lane &&
+        Math.abs(obstacle.z - rampZ) < this.levelgen.minGapZ,
+      )) {
+        continue;
+      }
+      if (this.bonuses.some((bonus) => !bonus.collected && Math.abs(bonus.z - rampZ) < this.levelgen.minGapZ)) {
+        continue;
+      }
+      const pathId = this.nextAirPathId++;
+      const coins: CoinEntity[] = mids.map((cue, index) => ({
+        id: this.nextAirCoinId--,
+        lane,
+        z: travel[index + 1],
+        y: airHeight(rampCfg, times[index + 1] - takeoffDelta),
+        collected: false,
+        airPathId: pathId,
+        airTargetTime: times[index + 1] - takeoffDelta,
+        musicTarget: { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'collect' as const },
+      }));
+      const ramp: RampEntity = { id: this.nextMusicEntityId--, lane, z: rampZ };
+      if (
+        !this.generator.certifyMusicCandidate(
+          [...this.obstacles],
+          [...this.coins, ...coins],
+          [...this.ramps, ramp],
+          this.rhythmPlacementContext(),
+        )
+      ) {
+        continue;
+      }
+      this.ramps.push(ramp);
+      for (const coin of coins) {
+        this.coins.push(coin);
+        this.rhythmTracked.set(coin.id, { entity: coin, contact: 0, previousZ: coin.z });
+      }
+      this.timingMetrics.planned += coins.length;
+      this.nextMusicGateId--;
+      this.rhythmSequence++;
+      // Короткая пауза после посадки: полёт уже резервировал окно, длинная
+      // тишина после него даёт заметные «пустые» участки.
+      this.nextRhythmTime = landing.time + 0.5 * rate;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Бит-отклик (пункт 4): тихий акцент + короткий свет на герое, когда подбор,
+   * смэш или уворот с musicTarget случился точно в окно бита. Только
+   * presentation-сигнал: геймплей не меняется, хитбоксы не трогаются.
+   */
+  private emitBeatHits(): void {
+    const forecast = this.rhythmForecast;
+    if (!forecast) return;
+    const window = this.opts.game.musicPlanning.hitWindowMs / 1000;
+    const threshold = this.opts.game.musicPlanning.confidenceThreshold;
+    const player = this.playerSim.state;
+    for (const coin of this.coins) {
+      const target = coin.musicTarget;
+      if (!target || !coin.collected || target.confidence < threshold) continue;
+      if (this.beatCountedIds.has(coin.id)) continue;
+      this.beatCountedIds.add(coin.id);
+      const error = Math.abs(forecast.now - target.time);
+      if (error <= window) this.registerBeatHit(1 - error / window);
+    }
+    for (const obstacle of this.obstacles) {
+      const target = obstacle.musicTarget;
+      if (!target || target.confidence < threshold) continue;
+      if (this.beatCountedIds.has(obstacle.id)) continue;
+      const smashed = Boolean(obstacle.smashed && !obstacle.crushBroken);
+      const dodged =
+        target.role === 'dodge' &&
+        !obstacle.broken &&
+        obstacle.z <= 0 &&
+        obstacle.lane !== player.lane;
+      if (!smashed && !dodged) continue;
+      this.beatCountedIds.add(obstacle.id);
+      const error = Math.abs(forecast.now - target.time);
+      if (error <= window) this.registerBeatHit(1 - error / window);
+    }
+  }
+
+  /**
+   * Бонус в крутой момент: воздушные бонусы (ракета/конь/машина в полёте)
+   * подбираются в полёте — сдвигаем момент подбора на даунбит/сильную фразу.
+   * Без прогноза — исходное время.
+   */
+  private snapAirBonusTime(desiredTime: number, flightSeconds: number): number {
+    const forecast = this.rhythmForecast;
+    if (!forecast || forecast.cues.length === 0) return desiredTime;
+    const rate = Math.max(0.25, forecast.rate);
+    const cue = pickStrongCue(forecast.now + desiredTime * rate, {
+      cues: forecast.cues,
+      rate,
+      windowSeconds: 0.35,
+      strongStrength: this.opts.game.musicPlanning.roleStrongStrength,
+    });
+    if (!cue) return desiredTime;
+    const snapped = (cue.time - forecast.now) / rate;
+    return Math.min(Math.max(snapped, 0.15), Math.max(0.2, flightSeconds - 0.05));
+  }
+
+  private registerBeatHit(precision: number): void {
+    this.beatHitPulse = 1;
+    this.sfxEvents.emit('beat', this.getSfxState(), 0.25 + 0.55 * precision);
+  }
+
+  /**
+   * Бит-отклик коня: прыжок через препятствие или подкат группы случился
+   * точно в окно её бита. Тот же тихий `beat` и свет, что у машины.
+   */
+  private maybeHorseBeatHit(obstacle: ObstacleEntity): void {
+    const forecast = this.rhythmForecast;
+    const target = obstacle.musicTarget;
+    if (!forecast || !target) return;
+    if (target.confidence < this.opts.game.musicPlanning.confidenceThreshold) return;
+    if (this.beatCountedIds.has(obstacle.id)) return;
+    this.beatCountedIds.add(obstacle.id);
+    const window = this.opts.game.musicPlanning.hitWindowMs / 1000;
+    const error = Math.abs(forecast.now - target.time);
+    if (error <= window) this.registerBeatHit(1 - error / window);
   }
 
   private measureRhythmEvents(): void {
@@ -3012,7 +3474,18 @@ export class GameSim {
     const direction = player.lane < this.levelgen.lanes / 2 ? 1 : -1;
     const rows = cfg.roadHorsePickupRows;
     const gap = cfg.roadHorsePickupGapZ;
-    const bonusZ = leadZ + rows * gap;
+    let bonusZ = leadZ + rows * gap;
+    // Подбор портала — в крутой момент, если сильный бит рядом.
+    if (this.rhythmForecast && this.rhythmForecast.cues.length > 0) {
+      const rate = Math.max(0.25, this.rhythmForecast.rate);
+      const snapped = snapBonusToStrongCue(bonusZ, Math.max(player.speed, 1), this.rhythmForecast.now, {
+        cues: this.rhythmForecast.cues,
+        rate,
+        windowSeconds: 0.6,
+        strongStrength: this.opts.game.musicPlanning.roleStrongStrength,
+      });
+      if (snapped) bonusZ = snapped.z;
+    }
     const patternId = this.nextMusicGateId--;
     this.clearMusicPatternArea(leadZ - 2, bonusZ + gap);
     let targetLane = player.lane;
@@ -3118,7 +3591,10 @@ export class GameSim {
       }
     }
     const guideCoin = guideIndex >= 0 ? this.coins.splice(guideIndex, 1)[0] : null;
-    const targetTime = guideCoin?.airTargetTime ?? desiredTime;
+    const targetTime = this.snapAirBonusTime(
+      guideCoin?.airTargetTime ?? desiredTime,
+      this.opts.game.ramp.flightTimeSeconds,
+    );
     this.spawnAirModeBonus(
       'rocket',
       guideCoin?.lane ?? player.lane,
@@ -3162,7 +3638,10 @@ export class GameSim {
       lateSongChance(cfg.jumpPickupChance, timing.lateProgress),
     );
     if (!overdue && this.bonusRng() >= chance) return false;
-    const targetTime = horseCfg.flightTimeSeconds * cfg.jumpPickupTargetProgress;
+    const targetTime = this.snapAirBonusTime(
+      horseCfg.flightTimeSeconds * cfg.jumpPickupTargetProgress,
+      horseCfg.flightTimeSeconds,
+    );
     this.spawnAirModeBonus(
       'rocket',
       player.lane,
@@ -3227,6 +3706,7 @@ export class GameSim {
     const cfg = this.opts.game.rocket;
     const speed = Math.max(player.speed, 1);
     const baseDistance = rocketDistanceAtTime(rocketFallStartTime(cfg), player.speed, cfg);
+    const forecast = this.rhythmForecast;
     const plan = planRocketLanding({
       baseDistance,
       returnSpeed: speed,
@@ -3236,6 +3716,11 @@ export class GameSim {
       ramps: this.ramps,
       config: this.levelgen,
       game: this.opts.game,
+      cues: forecast?.cues,
+      now: forecast?.now,
+      rate: forecast ? Math.max(0.25, forecast.rate) : 1,
+      baseFlightSeconds:
+        rocketFallStartTime(cfg) + rocketFallDurationSeconds(cfg),
     });
     this.rocketLandingAdjustSeconds = this.playerSim.adjustRocketFlight(
       plan.adjustSeconds,
@@ -3478,7 +3963,10 @@ export class GameSim {
       }
     }
     const guideCoin = guideIndex >= 0 ? this.coins.splice(guideIndex, 1)[0] : null;
-    const targetTime = guideCoin?.airTargetTime ?? desiredTime;
+    const targetTime = this.snapAirBonusTime(
+      guideCoin?.airTargetTime ?? desiredTime,
+      this.opts.game.ramp.flightTimeSeconds,
+    );
     this.spawnAirModeBonus(
       'horse',
       guideCoin?.lane ?? player.lane,
@@ -3586,7 +4074,10 @@ export class GameSim {
       lateSongChance(cfg.carJumpPickupChance, timing.lateProgress),
     );
     if (this.bonusRng() >= chance) return false;
-    const targetTime = cfg.flightTimeSeconds * cfg.carJumpPickupTargetProgress;
+    const targetTime = this.snapAirBonusTime(
+      cfg.flightTimeSeconds * cfg.carJumpPickupTargetProgress,
+      cfg.flightTimeSeconds,
+    );
     this.spawnAirModeBonus(
       'car',
       player.lane,
@@ -3786,6 +4277,7 @@ export class GameSim {
         }
         this.horseClearedObstacleIds.add(obstacle.id);
         this.smashHorseActionObstacle(obstacle);
+        this.maybeHorseBeatHit(obstacle);
         continue;
       }
       if (
@@ -3798,6 +4290,7 @@ export class GameSim {
         const groupId = obstacle.actionGroupId ?? obstacle.id;
         if (!this.horseSlideRewardedGroups.has(groupId)) {
           this.horseSlideRewardedGroups.add(groupId);
+          this.maybeHorseBeatHit(obstacle);
           this.playerSim.registerHorseClear();
           this.horseSlideClears += 1;
           this.grantAdrenaline(this.opts.game.adrenaline.gainHorseSlideClear);

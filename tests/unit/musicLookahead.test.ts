@@ -170,6 +170,40 @@ describe('music slice in real simulation', () => {
     expect(result.snapshot.musicTiming!.samples).toBeGreaterThan(6);
   });
 
+  it('marks downbeats on the kick phase and section starts on energy steps', () => {
+    const samples = new Float32Array(12000 * 20);
+    const click = (at: number, thump: boolean): void => {
+      for (let j = 0; j < 240; j++) samples[at + j] += Math.sin(j * 0.4) * Math.exp(-j / 50);
+      if (thump) {
+        for (let j = 0; j < 900; j++) samples[at + j] += Math.sin(j * 0.029) * 1.6 * Math.exp(-j / 220);
+      }
+    };
+    for (let beat = 2; beat < 40; beat++) click(beat * 6000, beat % 4 === 0);
+    const result = analyzeRhythm(samples, 12000);
+    expect(result.confidence).toBeGreaterThan(0.5);
+    const downs = result.cues.filter((c) => c.downbeat).map((c) => c.time);
+    expect(downs.length).toBeGreaterThanOrEqual(3);
+    // Даунбиты идут через ~2 с (каждый 4-й клик) и совпадают с тампами.
+    for (const time of [4, 8, 12, 16]) {
+      expect(downs.some((d) => Math.abs(d - time) < 0.12)).toBe(true);
+    }
+    expect(downs.every((d) => Math.abs(d / 2 - Math.round(d / 2)) < 0.12)).toBe(true);
+  });
+
+  it('flags a section start where the energy jumps', () => {
+    const samples = new Float32Array(12000 * 24);
+    for (let beat = 2; beat < 48; beat++) {
+      const loud = beat * 0.5 >= 12 ? 2.2 : 0.7;
+      for (let j = 0; j < 240; j++) {
+        samples[beat * 6000 + j] += loud * Math.sin(j * 0.4) * Math.exp(-j / 50);
+      }
+    }
+    const result = analyzeRhythm(samples, 12000);
+    const marks = result.cues.filter((c) => c.sectionStart).map((c) => c.time);
+    expect(marks.some((t) => Math.abs(t - 12) < 2.5)).toBe(true);
+    expect(marks.every((t) => t > 2 && t < 22)).toBe(true);
+  });
+
   it('continues with useful content on an uncertain track', () => {
     const result = runIntro(42, 'destroy', false);
     expect(result.snapshot.musicTiming!.planned).toBeGreaterThan(8);

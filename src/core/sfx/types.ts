@@ -3,7 +3,7 @@ import type { PlayerMode } from '@core/modes/types';
 import type { AirState } from '@core/gameplay/air';
 import type { RocketPhase } from '@core/gameplay/rocket';
 
-export const SFX_IDS = ['hit', 'canister', 'smash', 'coin', 'nitroReady', 'nitroStart', 'nitroEnd', 'nitroDry', 'rocketPrepare', 'rocketLaunch', 'rocketEnd', 'jump', 'land', 'slideStart', 'slideEnd', 'lane', 'nearMiss', 'combo', 'mode', 'gameOver', 'hoof', 'fullRepair'] as const;
+export const SFX_IDS = ['hit', 'canister', 'smash', 'coin', 'beat', 'nitroReady', 'nitroStart', 'nitroEnd', 'nitroDry', 'rocketPrepare', 'rocketLaunch', 'rocketEnd', 'jump', 'land', 'slideStart', 'slideEnd', 'lane', 'nearMiss', 'combo', 'mode', 'gameOver', 'hoof', 'fullRepair'] as const;
 export type SfxId = typeof SFX_IDS[number];
 export const SFX_BUSES = ['impact', 'ability', 'pickup', 'movement', 'foley'] as const;
 export type SfxBus = typeof SFX_BUSES[number];

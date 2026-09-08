@@ -4,6 +4,10 @@ export interface MusicCue {
   strength: number;
   confidence: number;
   phrase: boolean;
+  /** Первая доля такта (кик-акцент в фазе 4/4). */
+  downbeat?: boolean;
+  /** Рядом граница секции (куплет/припев по энергии). */
+  sectionStart?: boolean;
 }
 
 export interface MusicForecast {
@@ -27,8 +31,14 @@ export const MUSIC_PLANNING_DEFAULTS = {
   hitWindowMs: 120,
   fallbackBpm: 112,
   introSeconds: 20,
+  roleStrongStrength: 0.7,
+  roleDodgeIntensity: 0.3,
+  quantizeWindowSeconds: 0.22,
+  horseJumpLeadSeconds: 0.35,
+  horseSlideLeadSeconds: 0.2,
+  horseDodgeLeadSeconds: 0.25,
   stageEnds: [0.48,0.72,0.8],
-  densityCaps: [0.38,0.48,0.62,0.36,0.7],
+  densityCaps: [0.38,0.55,0.68,0.46,0.7],
   actionCaps: [2,3,4,2,5],
   blockedLaneCaps: [1,2,2,1,3],
   reactionSeconds: [0.65,0.45,0.35,0.5,0.28],
@@ -60,14 +70,42 @@ export function runEnvelope(time: number, duration: number, config: MusicPlannin
 
 export interface MusicalPatternRequest {
   cue: MusicCue;
-  kind: 'collect' | 'dodge';
+  kind: 'collect' | 'dodge' | 'air';
   accents: readonly MusicCue[];
+}
+
+/**
+ * Ролевая сетка битов (таблица «как в Guitar Hero»):
+ * слабые биты — подборы, средние/фразы — увороты, сильные уверенные фразы —
+ * воздушные связки (рампа: взлёт на слабом, приземление на сильном).
+ */
+export interface BeatRoles {
+  strongStrength: number;
+  dodgeIntensity: number;
+  confidence: number;
+}
+
+export const DEFAULT_BEAT_ROLES: BeatRoles = {
+  strongStrength: 0.7,
+  dodgeIntensity: 0.3,
+  confidence: 0.48,
+};
+
+export function resolveBeatRole(
+  cue: MusicCue,
+  intensity: number,
+  roles: BeatRoles = DEFAULT_BEAT_ROLES,
+): 'collect' | 'dodge' | 'air' {
+  const confident = cue.confidence >= roles.confidence;
+  if (cue.phrase && confident && cue.strength >= roles.strongStrength) return 'air';
+  if (cue.phrase && intensity > roles.dodgeIntensity && confident) return 'dodge';
+  return 'collect';
 }
 
 export function requestMusicalPatterns(forecast: MusicForecast, intensity: number): MusicalPatternRequest[] {
   return forecast.cues.filter(cue => cue.time > forecast.now).map((cue, index, cues) => ({
     cue,
-    kind: cue.phrase && intensity > 0.3 && cue.confidence >= 0.48 ? 'dodge' : 'collect',
+    kind: resolveBeatRole(cue, intensity),
     accents: cues.slice(index, index + 4),
   }));
 }

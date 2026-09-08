@@ -1,6 +1,7 @@
 import type { GameConfig, LevelgenConfig } from '@core/config/schemas';
 import type { ObstacleEntity, RampEntity } from '@core/levelgen/types';
 import { findComfortableCarRoute } from '@core/levelgen/passability';
+import type { MusicCue } from './musicPlanning';
 
 /**
  * Безопасная посадка ракеты: fairness-слой.
@@ -26,6 +27,14 @@ export interface RocketLandingRequest {
   ramps: readonly RampEntity[];
   config: LevelgenConfig;
   game: GameConfig;
+  /** Биты для предпочтения крутых посадок (даунбит/секция). */
+  cues?: readonly MusicCue[];
+  /** Трек-время подбора ракеты. */
+  now?: number;
+  /** Темп трека (тиков в секунду трека). */
+  rate?: number;
+  /** Игровые секунды от подбора до посадки без поправки. */
+  baseFlightSeconds?: number;
 }
 
 export interface RocketLandingPlan {
@@ -83,6 +92,53 @@ function postWindowPassable(
   return result.passable;
 }
 
+/** Безопасна ли посадка в точке (публично для даунбит-подбора в GameSim). */
+export function isRocketLandingSafe(
+  request: RocketLandingRequest,
+  landingDist: number,
+  lane: number,
+): boolean {
+  return (
+    immediateBoxClear(request, landingDist, lane) &&
+    postWindowPassable(request, landingDist, lane)
+  );
+}
+
+/**
+ * Тот же поиск окна, но среди кандидатов предпочитаем посадку на крутой
+ * момент (даунбит, граница секции, сильная фраза) — в пределах безопасности.
+ */
+function coolLandingAdjust(
+  request: RocketLandingRequest,
+  maxAdjust: number,
+  lanesToTry: number[],
+): RocketLandingPlan | null {
+  const cues = request.cues;
+  if (!cues || cues.length === 0 || request.now === undefined) return null;
+  const rate = Math.max(0.25, request.rate ?? 1);
+  const speed = Math.max(request.returnSpeed, 1);
+  const baseFlight =
+    request.baseFlightSeconds ?? request.baseDistance / speed;
+  const scored: { adjust: number; cool: number }[] = [];
+  for (const cue of cues) {
+    const cool = cue.downbeat ? 0 : cue.sectionStart ? 1 : cue.phrase ? 2 : 3;
+    if (cool > 2) continue;
+    const adjust = (cue.time - request.now) / rate - baseFlight;
+    if (Math.abs(adjust) > maxAdjust + 1e-9) continue;
+    scored.push({ adjust, cool });
+  }
+  scored.sort((a, b) => a.cool - b.cool || Math.abs(a.adjust) - Math.abs(b.adjust));
+  for (const { adjust } of scored) {
+    for (const lane of lanesToTry) {
+      const landing = request.baseDistance + adjust * speed * request.cruiseBoost;
+      if (landing <= 0) continue;
+      if (!isRocketLandingSafe(request, landing, lane)) continue;
+      return { adjustSeconds: adjust, landingLane: lane, fallback: false };
+    }
+  }
+  return null;
+}
+
 export function planRocketLanding(
   request: RocketLandingRequest,
 ): RocketLandingPlan {
@@ -106,13 +162,15 @@ export function planRocketLanding(
       lanesToTry.push(request.lane + offset);
     }
   }
+  // Сначала крутая посадка (даунбит/секция/фраза), потом ближайшее окно.
+  const cool = coolLandingAdjust(request, maxAdjust, lanesToTry);
+  if (cool) return cool;
   for (const adjust of candidates) {
     const landingDist =
       request.baseDistance + adjust * request.returnSpeed * request.cruiseBoost;
     if (landingDist <= 0) continue;
     for (const lane of lanesToTry) {
-      if (!immediateBoxClear(request, landingDist, lane)) continue;
-      if (!postWindowPassable(request, landingDist, lane)) continue;
+      if (!isRocketLandingSafe(request, landingDist, lane)) continue;
       return { adjustSeconds: adjust, landingLane: lane, fallback: false };
     }
   }

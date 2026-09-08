@@ -1,6 +1,6 @@
 import type { PlayerAction } from '@core/gameplay/actions';
 import type { InputBuffer } from './InputBuffer';
-import { isUiGestureTarget, swipeToAction } from './swipe';
+import { isUiGestureTarget, swipeMove, swipeToAction } from './swipe';
 
 /** Стрелки — основной вариант, WASD — тихий дубль с тем же смыслом. */
 export function keyCodeToAction(code: string): PlayerAction | null {
@@ -55,10 +55,16 @@ export class InputAdapter {
   private readonly handlePointerMove = (e: PointerEvent): void => {
     if (!this.tracking || e.pointerId !== this.pointerId) return;
     if (e.cancelable) e.preventDefault();
-    const action = swipeToAction(e.clientX - this.startX, e.clientY - this.startY);
-    if (!action) return;
-    this.finishPointerGesture();
-    this.buffer.push(action, performance.now());
+    const step = swipeMove(
+      { startX: this.startX, startY: this.startY },
+      e.clientX,
+      e.clientY,
+    );
+    if (!step.action) return;
+    // Без отрыва пальца: якорь едет дальше вместе с пальцем.
+    this.startX = step.state.startX;
+    this.startY = step.state.startY;
+    this.buffer.push(step.action, performance.now());
   };
 
   private readonly handlePointerUp = (e: PointerEvent): void => {

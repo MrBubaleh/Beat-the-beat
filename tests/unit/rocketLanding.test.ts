@@ -47,6 +47,34 @@ describe('rocket landing planner', () => {
     expect(plan).toEqual({ adjustSeconds: 0, landingLane: 1, fallback: false });
   });
 
+  it('prefers a downbeat landing within a safe window', () => {
+    // База свободна, но рядом даунбит: посадка должна притянуться к нему.
+    // baseDistance 300, скорость 28: база ≈ 10.7 игровых секунд; даунбит на
+    // трек-времени 11.5 при now=0, rate=1 → adjust ≈ +0.8 с.
+    const req: RocketLandingRequest = {
+      ...request([], 1),
+      cues: [{ id: 1, time: 11.5, strength: 0.9, confidence: 1, phrase: true, downbeat: true }],
+      now: 0,
+      rate: 1,
+      baseFlightSeconds: 300 / 28,
+    };
+    const plan = planRocketLanding(req);
+    expect(plan.fallback).toBe(false);
+    expect(plan.adjustSeconds).toBeCloseTo(11.5 - 300 / 28, 6);
+  });
+
+  it('ignores unreachable downbeats and keeps the nearest window', () => {
+    const req: RocketLandingRequest = {
+      ...request([], 1),
+      cues: [{ id: 1, time: 60, strength: 0.9, confidence: 1, phrase: true, downbeat: true }],
+      now: 0,
+      rate: 1,
+      baseFlightSeconds: 300 / 28,
+    };
+    const plan = planRocketLanding(req);
+    expect(plan).toEqual({ adjustSeconds: 0, landingLane: 1, fallback: false });
+  });
+
   it('extends the flight to the nearest certified window', () => {
     // Базовая точка и ближние кандидаты заняты во всех полосах.
     const obstacles: ObstacleEntity[] = [];

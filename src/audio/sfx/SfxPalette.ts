@@ -58,7 +58,7 @@ class Layers {
 
 export function buildPaletteVoice(ctx: BaseAudioContext, noise: AudioBuffer, voice: VoiceNodes, out: AudioNode,
   cfg: SfxConfig, request: VoiceRequest, at: number): boolean {
-  if (!['hit', 'canister', 'smash', 'coin', 'hoof'].includes(request.event)) return false;
+  if (!['hit', 'canister', 'smash', 'coin', 'hoof', 'beat'].includes(request.event)) return false;
   const p: SfxPatch = cfg.patches[request.event];
   const layer = new Layers(ctx, noise, voice, out, request.voiceId);
   const d = request.duration;
@@ -118,6 +118,13 @@ export function buildPaletteVoice(ctx: BaseAudioContext, noise: AudioBuffer, voi
         p.toneMix * c.shimmerMix, at + d * 0.014, d * 0.68, ring);
       layer.noise(p.filterHz, p.filterEndHz, 0.7, p.noiseMix, at, d * 0.1,
         [[0.04, 1], [0.3, 0.15]], 'highpass');
+      break;
+    }
+    case 'beat': {
+      const tick: Shape = [[attack, 1], [0.2, 0.4], [0.55, 0.06]];
+      layer.tone(p.bodyHz * pitch, p.endHz * pitch, p.toneMix * 0.8, at, d, tick);
+      layer.noise(p.filterHz, p.filterEndHz, p.q, p.noiseMix, at, d * 0.12,
+        [[0.05, 1], [0.35, 0.12]], 'highpass');
       break;
     }
     case 'hoof': {

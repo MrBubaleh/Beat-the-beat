@@ -14,6 +14,26 @@ export function swipeToAction(
   return dy < 0 ? 'nitro' : 'fastFall';
 }
 
+export interface SwipePointerState {
+  startX: number;
+  startY: number;
+}
+
+/**
+ * Цепочка без отрыва пальца: каждый отрезок в 36 px — отдельное действие,
+ * якорь переставляется под палец. Дискретность полос сохраняется.
+ */
+export function swipeMove(
+  state: SwipePointerState,
+  x: number,
+  y: number,
+  threshold = SWIPE_THRESHOLD_PX,
+): { action: PlayerAction | null; state: SwipePointerState } {
+  const action = swipeToAction(x - state.startX, y - state.startY, threshold);
+  if (!action) return { action: null, state };
+  return { action, state: { startX: x, startY: y } };
+}
+
 export function isUiGestureTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   return Boolean(

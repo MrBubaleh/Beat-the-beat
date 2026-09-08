@@ -121,7 +121,7 @@ async function patch(id: SfxId) {
   engine!.apply(director.tick([event], input, ctx!.currentTime).filter(c => c.type !== 'beds'));
 }
 const labels: Record<SfxId, string> = {
-  hit:'Удар',canister:'Баллон нитро',smash:'Разрушение',coin:'Монета',
+  hit:'Удар',canister:'Баллон нитро',smash:'Разрушение',coin:'Монета',beat:'Бит-акцент',
   nitroReady:'Нитро готово',nitroStart:'Нитро: запуск',nitroEnd:'Нитро: выход',nitroDry:'Нитро: пустой чих',
   rocketPrepare:'Ракета: подготовка',rocketLaunch:'Ракета: взлёт',rocketEnd:'Ракета: спад',
   jump:'Прыжок',land:'Приземление',slideStart:'Подкат: вход',slideEnd:'Подкат: выход',
