@@ -1,5 +1,6 @@
 import { sfxConfigSchema, type SfxConfig } from '../sfx/config';
 import { z } from 'zod';
+import { MUSIC_PLANNING_DEFAULTS } from '../gameplay/musicPlanning';
 
 export const gameConfigSchema = z.object({
   tutorial: z.object({
@@ -80,6 +81,21 @@ export const gameConfigSchema = z.object({
     yawMaxRadians: z.number().positive(),
     yawRampSeconds: z.number().positive(),
   }),
+  musicPlanning: z.object({
+    enabled: z.boolean(), preparationSeconds: z.number().min(1).max(15),
+    lookaheadSeconds: z.number().min(8).max(60), maxFileMB: z.number().min(1).max(256),
+    maxDecodedSeconds: z.number().min(20).max(1800), minLeadSeconds: z.number().min(1),
+    maxLeadSeconds: z.number().min(1), confidenceThreshold: z.number().min(0).max(1),
+    hitWindowMs: z.number().positive(), fallbackBpm: z.number().min(60).max(180),
+    introSeconds: z.number().min(15).max(25),
+    stageEnds: z.array(z.number().min(0).max(1)).length(3),
+    densityCaps: z.array(z.number().min(0).max(1)).length(5),
+    actionCaps: z.array(z.number().int().min(1).max(8)).length(5),
+    blockedLaneCaps: z.array(z.number().int().min(1).max(3)).length(5),
+    reactionSeconds: z.array(z.number().min(0.28).max(2)).length(5),
+    speedCaps: z.array(z.number().min(1).max(1.8)).length(5),
+  }).refine(value => value.maxLeadSeconds >= value.minLeadSeconds && value.lookaheadSeconds > value.maxLeadSeconds,
+    { message: 'music planning horizon must exceed the scheduling lead' }).refine(value => value.stageEnds.every((end, i) => i === 0 || end > value.stageEnds[i - 1]), { message: 'music stages must be ordered' }).default(MUSIC_PLANNING_DEFAULTS),
   musicScenes: z.object({
     minArrivalSeconds: z.number().positive(),
     maxArrivalSeconds: z.number().positive(),
@@ -217,6 +233,8 @@ export const gameConfigSchema = z.object({
     jumpPickupTargetProgress: z.number().min(0).max(1),
     corridorSeconds: z.number().positive(),
     postLandingRampCooldownSeconds: z.number().nonnegative(),
+    landingAdjustMaxSeconds: z.number().nonnegative(),
+    landingSafeSeconds: z.number().nonnegative(),
     coinSpacingSeconds: z.number().positive(),
     coinsPerLaneSegment: z.number().int().positive(),
     coinEndBufferSeconds: z.number().nonnegative(),

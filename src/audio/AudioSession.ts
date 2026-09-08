@@ -18,7 +18,20 @@ import { AudioWorkletAnalyzer } from './AudioWorkletAnalyzer';
 import type { VideoDisplayMode } from '@app/videoDisplay';
 import { VideoFileAudioSource } from './VideoFileAudioSource';
 
+import { MusicLookahead } from './MusicLookahead';
+import { MUSIC_PLANNING_DEFAULTS, type MusicPlanningConfig } from '@core/gameplay/musicPlanning';
+
 export class AudioSession {
+  private lookahead = new MusicLookahead(MUSIC_PLANNING_DEFAULTS);
+  private planningConfig = MUSIC_PLANNING_DEFAULTS;
+  onPreparationProgress: (message: string) => void = () => undefined;
+
+
+  configureMusicPlanning(config: MusicPlanningConfig): void {
+    this.lookahead.dispose();
+    this.planningConfig = config;
+    this.lookahead = new MusicLookahead(config);
+  }
   private sfxConfig: SfxConfig | null = null;
   private sfxDirector: SfxDirector | null = null;
   private sfxEngine: SfxEngine | null = null;
@@ -96,10 +109,20 @@ export class AudioSession {
 
   async loadFile(file: File): Promise<void> {
     await this.loadFromSource(file.name, (source) => source.load(file));
+    await this.lookahead.prepare(this.ctx!, async () => {
+      if (file.size > this.planningConfig.maxFileMB * 1024 * 1024) throw new Error('file budget');
+      return file.arrayBuffer();
+    }, this.trackDuration, this.onPreparationProgress);
   }
 
   async loadUrl(url: string, fileName: string): Promise<void> {
     await this.loadFromSource(fileName, (source) => source.loadUrl(url, fileName));
+    await this.lookahead.prepare(this.ctx!, async () => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('track fetch');
+      if (Number(response.headers.get('content-length')) > this.planningConfig.maxFileMB * 1024 * 1024) throw new Error('file budget');
+      return response.arrayBuffer();
+    }, this.trackDuration, this.onPreparationProgress);
   }
 
   async play(): Promise<void> {
@@ -119,6 +142,7 @@ export class AudioSession {
     this.resetSfx();
     this.pause();
     this.source?.rewind();
+    this.lookahead.restart();
     this.clock?.restart();
     this.analyzer?.restart();
     this.setTutorialPlaybackScale(1);
@@ -131,10 +155,12 @@ export class AudioSession {
     this.resetSfx();
     if (!this.ready || !this.source || !this.ctx) return;
     await this.resume();
+    this.source.rewind();
+    this.lookahead.restart();
     this.clock?.restart();
     this.analyzer?.restart();
     this.setTutorialPlaybackScale(1);
-    await this.source.restart();
+    await this.source.play();
     this.playing = true;
     this.damageStressSmoothed = 0;
     this.nitroBoostSmoothed = 0;
@@ -217,7 +243,19 @@ export class AudioSession {
   }
 
   getMusicState(): MusicState {
-    return this.analyzer?.getLatestState() ?? emptyMusicState();
+    const live = this.analyzer?.getLatestState() ?? emptyMusicState();
+    if (!this.planningConfig.enabled) return live;
+    const now = Math.max(0, this.trackTime - this.latencyOffset);
+    const rate = Math.max(this.tutorialConfig.audioMinPlaybackRate,
+      this.tutorialScale ** this.tutorialConfig.audioPlaybackRatePower) / Math.max(0.01, this.tutorialScale);
+    const forecast = this.lookahead.forecast(now, rate);
+    const cue = forecast.source === 'decoded' ? forecast.cues.filter(c => c.time <= now && now - c.time < 0.09).at(-1) : undefined;
+    const beat = this.isPlaying && cue !== undefined;
+
+    return { ...live, audioTime: now, forecast,
+      energy: { value: forecast.energy?.filter(frame => frame.time <= now).at(-1)?.value ?? live.energy.value, audioTime: now },
+      beat: forecast.source === 'decoded' ? { value: beat, audioTime: cue?.time ?? now } : live.beat };
+
   }
 
   setTutorialConfig(config: TutorialConfig): void {
@@ -457,12 +495,15 @@ export class AudioSession {
     load: (source: VideoFileAudioSource) => Promise<void>,
   ): Promise<void> {
     this.resetSfx();
-    this.playing = false;
+    this.pause();
+    this.ready = false;
     this.loadedFileName = fileName;
     this.ensureContext();
     if (!this.source) this.source = new VideoFileAudioSource();
     await load(this.source);
+    this.clock = new AudioClock(this.source, this.config.latencyOffsetMs / 1000);
     this.ensurePipeline();
+    await this.analyzer!.start(this.graph!.musicBus, this.clock!);
     this.setTutorialPlaybackScale(this.tutorialScale);
     if (!this.sourceConnected) {
       const node = this.source.connect(this.ctx!);
@@ -480,7 +521,7 @@ export class AudioSession {
       this.graph = new AudioGraph(this.ctx!);
       this.graph.setMasterVolume(this.masterVolume);
       this.analyzer = new AudioWorkletAnalyzer(this.ctx!, this.config);
-      void this.analyzer.start(this.graph.musicBus, this.clock!);
+
     }
   }
 

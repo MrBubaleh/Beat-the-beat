@@ -4,6 +4,7 @@ export type HorseActionKind = 'jump' | 'slide';
 export type SceneryTheme = 'frontierTown';
 
 export interface ObstacleEntity {
+  musicTarget?: MusicTarget;
   id: number;
   kind: ObstacleKind;
   lane: number;
@@ -67,6 +68,7 @@ export interface SceneryZoneEntity {
 }
 
 export interface CoinEntity {
+  musicTarget?: MusicTarget;
   id: number;
   lane: number;
   x?: number;
@@ -135,4 +137,11 @@ export interface BonusEntity {
   airPathId?: number;
   trainId?: number;
   trainOffsetZ?: number;
+}
+
+export interface MusicTarget {
+  time: number;
+  cueId: number;
+  confidence: number;
+  role: 'collect' | 'dodge';
 }

@@ -40,6 +40,11 @@ export interface ObstacleModelInstance {
   baseMaterials: Array<{ mesh: THREE.Mesh; material: THREE.Material }>;
 }
 
+export interface ObstacleTintOutline {
+  lines: THREE.LineSegments[];
+  material: THREE.LineBasicMaterial;
+}
+
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 const CYLINDER = new THREE.CylinderGeometry(0.5, 0.5, 1, 10);
 const CONE = new THREE.ConeGeometry(0.5, 1, 9);
@@ -141,6 +146,39 @@ export function buildObstacleModel(
     }
   });
   return instance;
+}
+
+export function createObstacleTintOutline(
+  model: ObstacleModelInstance,
+  color = 0x72ffad,
+): ObstacleTintOutline {
+  const material = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const lines = model.tintMeshes.map((mesh) => {
+    const line = new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry, 24),
+      material,
+    );
+    line.scale.setScalar(1.018);
+    line.renderOrder = 13;
+    line.visible = false;
+    mesh.add(line);
+    return line;
+  });
+  return { lines, material };
+}
+
+export function disposeObstacleTintOutline(outline: ObstacleTintOutline): void {
+  for (const line of outline.lines) {
+    line.removeFromParent();
+    line.geometry.dispose();
+  }
+  outline.material.dispose();
 }
 
 export function resolveObstacleModelDimensions(

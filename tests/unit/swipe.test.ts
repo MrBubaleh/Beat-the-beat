@@ -11,6 +11,7 @@ describe('swipeToAction', () => {
 
   it('ignores short moves', () => {
     expect(swipeToAction(10, 8)).toBeNull();
+    expect(SWIPE_THRESHOLD_PX).toBe(36);
   });
 
   it('uses the dominant axis', () => {

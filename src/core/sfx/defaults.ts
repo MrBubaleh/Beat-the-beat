@@ -246,6 +246,30 @@ export const sfxFallback: SfxConfig = {
       "strengthGain": 0.3,
       "speedPitch": 0.06
     },
+    "nitroDry": {
+      "bus": "ability",
+      "priority": 40,
+      "gain": 0.2,
+      "attackMs": 4,
+      "decayMs": 90,
+      "tailMs": 120,
+      "bodyHz": 150,
+      "endHz": 70,
+      "filterHz": 900,
+      "filterEndHz": 400,
+      "q": 1.2,
+      "toneMix": 0.5,
+      "noiseMix": 0.7,
+      "partials": [
+        1,
+        1.48
+      ],
+      "jitterCents": 60,
+      "cooldownMs": 600,
+      "maxVoices": 1,
+      "strengthGain": 0.3,
+      "speedPitch": 0.06
+    },
     "rocketPrepare": {
       "bus": "ability",
       "priority": 80,
@@ -637,9 +661,9 @@ export const sfxFallback: SfxConfig = {
     }
   },
   "rocketSample": {
-    "gain": 1.11,
+    "gain": 0.9,
     "fadeInMs": 0,
-    "fadeOutMs": 1290
+    "fadeOutMs": 1900
   },
   "levelSamples": {
     "engineStartGain": 1,

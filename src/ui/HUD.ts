@@ -27,6 +27,7 @@ export interface RunResults {
 }
 
 export interface HUDOptions {
+  onPause?: () => void;
   onResume?: () => void;
   onRestart?: () => void;
   onChooseFile?: () => void;
@@ -54,6 +55,7 @@ export class HUD {
   private readonly trackFillEl: HTMLDivElement;
   private readonly trackTimeEl: HTMLDivElement;
   private readonly countdownEl: HTMLDivElement;
+  private readonly pauseBtn: HTMLButtonElement;
   private readonly pauseEl: HTMLDivElement;
   private readonly pauseVolume: VolumeSlider | null;
   private readonly resultsEl: HTMLDivElement;
@@ -67,6 +69,7 @@ export class HUD {
   private nitroHintTimer: number | null = null;
   private prevAdrenalineFill = 0;
   private prevNitroFill = 0;
+  private prevNitroDryPulse = 0;
   private adrenalineFlashAnim: Animation | null = null;
   private nitroFlashAnim: Animation | null = null;
   private adrenalineBorderBase = '1px solid rgba(70,210,110,.55)';
@@ -180,6 +183,14 @@ export class HUD {
     this.countdownEl.style.cssText =
       'position:absolute;inset:0;display:none;align-items:center;justify-content:center;';
     this.root.appendChild(this.countdownEl);
+
+    this.pauseBtn = document.createElement('button');
+    this.pauseBtn.type = 'button';
+    this.pauseBtn.className = 'hud-pause-btn';
+    this.pauseBtn.textContent = '⏸';
+    this.pauseBtn.setAttribute('aria-label', 'Пауза');
+    this.pauseBtn.addEventListener('click', () => opts.onPause?.());
+    this.root.appendChild(this.pauseBtn);
 
     this.pauseEl = document.createElement('div');
     this.pauseEl.className = 'hud-pause';
@@ -337,6 +348,10 @@ export class HUD {
     if (snapshot.salvationFlash > 0) {
       this.flashNitroBarSalvation(snapshot.salvationFlash);
     }
+    if (snapshot.nitroDryPulse > 0 && this.prevNitroDryPulse <= 0) {
+      this.flashNitroDry();
+    }
+    this.prevNitroDryPulse = snapshot.nitroDryPulse;
     this.prevNitroFill = nitroFill;
     this.applyNitroBarStyle(nitroFull, nitroActive);
     this.nitroWrap.style.opacity = nitroActive
@@ -388,6 +403,7 @@ export class HUD {
 
   setPaused(paused: boolean): void {
     this.pauseEl.style.display = paused ? 'flex' : 'none';
+    this.root.classList.toggle('is-paused', paused);
     if (paused) {
       this.pauseVolume?.setValue(this.opts.getMasterVolume?.() ?? 1);
     }
@@ -427,6 +443,7 @@ export class HUD {
     this.prevCombo = 0;
     this.prevAdrenalineFill = 0;
     this.prevNitroFill = 0;
+    this.prevNitroDryPulse = 0;
     this.nitroHintShown = false;
     if (this.nitroHintTimer !== null) window.clearTimeout(this.nitroHintTimer);
     this.nitroHintTimer = null;
@@ -573,6 +590,29 @@ export class HUD {
       '0 0 14px rgba(80,220,255,.85)',
       'brightness(1.35)',
       undefined,
+      this.nitroFillShadowBase,
+      'none',
+    );
+  }
+
+  private flashNitroDry(): void {
+    this.nitroWrap.animate(
+      [
+        { translate: '0 0' },
+        { translate: '-5px 0' },
+        { translate: '5px 0' },
+        { translate: '-3px 0' },
+        { translate: '0 0' },
+      ],
+      { duration: 220, easing: 'ease-out' },
+    );
+    this.flashBar(
+      this.nitroFillEl,
+      this.nitroWrap,
+      'nitro',
+      '0 0 12px rgba(255,150,90,.8)',
+      'brightness(1.3) saturate(.6)',
+      '1px solid rgba(255,170,110,.9)',
       this.nitroFillShadowBase,
       'none',
     );

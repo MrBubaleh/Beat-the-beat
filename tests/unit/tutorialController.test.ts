@@ -10,7 +10,7 @@ const SLOW_MO_SCALE = game.tutorial.slowMoScale;
 const SLOW_MO_MID_SCALE = 1 - 0.5 * (1 - SLOW_MO_SCALE);
 const low = (id = 1, z = 30, lane = 1): ObstacleEntity => ({ id, kind: 'low', z, lane });
 const jump = (id = 1, z = 30, lane = 1): ObstacleEntity => ({ ...low(id, z, lane), horseAction: 'jump' });
-const slide = (id = 2, z = 40, lane = 1): ObstacleEntity => ({
+const slide = (id = 2, z = 30, lane = 1): ObstacleEntity => ({
   id, kind: 'overhead', z, lane, horseAction: 'slide',
 });
 function snapshot(mode: 'car' | 'horse' | 'rocket' = 'car', obstacles = [low()]): TutorialSnapshot {
@@ -26,7 +26,7 @@ function slowFixture(mode: 'car' | 'horse' = 'car') {
   const target = mode === 'car' ? low() : jump();
   const state = snapshot(mode, [target]);
   controller.update(state, 1 / 60);
-  target.z = 8;
+  target.z = 6;
   expect(controller.update(state, 0.25).timeScale).toBeCloseTo(SLOW_MO_SCALE);
   return { controller, state, target };
 }
@@ -35,14 +35,14 @@ describe('TutorialController target acquisition', () => {
   it('uses the exact design defaults in JSON and fallback and validates them', () => {
     expect(game.tutorial).toEqual(configFallbacks.game.tutorial);
     expect(gameConfigSchema.safeParse(game).success).toBe(true);
-    expect(game.tutorial.slowMoScale).toBe(0.48);
+    expect(game.tutorial.slowMoScale).toBe(0.7);
   });
 
   it.each([
     { nitroArrowMinDistance: 45 },
     { horseArrowMinTimeToObstacle: 6 },
     { horseJumpArrowMinTimeToObstacle: 4 },
-    { horseJumpArrowMinTimeToObstacle: 0.7 },
+    { horseJumpArrowMinTimeToObstacle: 0.5 },
     { slowMoScale: 0 },
     { slowMoScale: 1.1 },
     { slowMoBlendSeconds: 0 },
@@ -124,7 +124,7 @@ describe('TutorialController target acquisition', () => {
     const controller = new TutorialController(game);
     expect(controller.update(state, 0)).toMatchObject({ stage: 'jump', targetObstacleId: 2, timeScale: 1 });
     expect(new TutorialController(game).update(snapshot('horse', [jump(1, 45)]), 0).active).toBe(false);
-    expect(new TutorialController(game).update(snapshot('horse', [slide(3, 45)]), 0).stage).toBe('slide');
+    expect(new TutorialController(game).update(snapshot('horse', [slide(3, 30)]), 0).stage).toBe('slide');
   });
 
   it('retargets horse on lane change and releases slow-mo', () => {
@@ -216,10 +216,10 @@ describe('TutorialController slow-mo lifecycle', () => {
     const target = low();
     const state = snapshot('car', [target]);
     expect(controller.update(state, 5).timeScale).toBe(1);
-    target.z = 8;
-    const middle = controller.update(state, 0.125);
+    target.z = 6;
+    const middle = controller.update(state, game.tutorial.slowMoBlendSeconds / 2);
     expect(middle.timeScale).toBeCloseTo(SLOW_MO_MID_SCALE);
-    expect(controller.update(state, 0.125).timeScale).toBeCloseTo(SLOW_MO_SCALE);
+    expect(controller.update(state, game.tutorial.slowMoBlendSeconds / 2).timeScale).toBeCloseTo(SLOW_MO_SCALE);
   });
 
   it('releases on success while preserving the completed stage', () => {
@@ -253,10 +253,10 @@ describe('TutorialController slow-mo lifecycle', () => {
     if (reason === 'passed') target.z = -10;
     else state.obstacles = [];
     state.obstacles = [...state.obstacles, low(2, 35)];
-    expect(controller.update(state, 0.25)).toMatchObject({ active: false, timeScale: SLOW_MO_SCALE });
-    expect(controller.update(state, 0.25).timeScale).toBeCloseTo(SLOW_MO_SCALE);
-    expect(controller.update(state, 0.125).timeScale).toBeCloseTo(SLOW_MO_MID_SCALE);
-    expect(controller.update(state, 0.125).timeScale).toBe(1);
+    expect(controller.update(state, 0.1)).toMatchObject({ active: false, timeScale: SLOW_MO_SCALE });
+    expect(controller.update(state, 0.1).timeScale).toBeCloseTo(SLOW_MO_SCALE);
+    expect(controller.update(state, game.tutorial.slowMoBlendSeconds / 2).timeScale).toBeCloseTo(SLOW_MO_MID_SCALE);
+    expect(controller.update(state, game.tutorial.slowMoBlendSeconds / 2).timeScale).toBe(1);
     expect(controller.update(state, 0).targetObstacleId).toBe(2);
   });
 
@@ -327,7 +327,7 @@ describe('TutorialController slow-mo lifecycle', () => {
     const target = low(1, 20);
     const state = snapshot('car', [target]);
     expect(controller.update(state, 0).active).toBe(true);
-    target.z = 8;
+    target.z = 6;
     expect(controller.update(state, 0.25).timeScale).toBe(0.5);
   });
 });

@@ -2,7 +2,11 @@ import type { DirectorIntent } from '@core/state/DirectorIntent';
 import type { MusicState } from '@core/state/MusicState';
 import type { DirectorMemory } from './DirectorMemory';
 
+import type { MusicalPatternRequest } from '../gameplay/musicPlanning';
+
 export interface DirectorOutput {
+  patterns?: MusicalPatternRequest[];
+  speedPlan?: readonly { time: number; value: number }[];
   intents: DirectorIntent[];
   phase: string;
   phaseElapsed: number;

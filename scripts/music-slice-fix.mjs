@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+function edit(p,a,b){const s=fs.readFileSync(p,'utf8').replaceAll('\r\n','\n');if(!s.includes(a))throw Error(p+': '+a.slice(0,80));fs.writeFileSync(p,s.replace(a,b));}
+edit('src/app/bootstrap.ts','  audio.configureMusicPlanning({ ...resolvedGameCfg.musicPlanning, enabled: musicPlanningEnabled });\n','');
+edit('src/app/bootstrap.ts','  const audio = new AudioSession(audioCfg, resolvedGameCfg.tutorial);','  const audio = new AudioSession(audioCfg, resolvedGameCfg.tutorial);\n  audio.configureMusicPlanning({ ...resolvedGameCfg.musicPlanning, enabled: musicPlanningEnabled });');
+edit('src/audio/MusicLookahead.ts','  private until = 0;', '  private until = 0;\n  private initialCues: MusicCue[] = [];\n  private initialUntil = 0;\n  private serial = 0;');
+edit('src/audio/MusicLookahead.ts','MessageEvent<{ cues: MusicCue[]; until: number }>', 'MessageEvent<{ cues: MusicCue[]; until: number; serial: number }>');
+edit('src/audio/MusicLookahead.ts','            const known = new Set', '            if (event.data.serial !== this.serial) return;\n            const known = new Set');
+edit('src/audio/MusicLookahead.ts','            this.until = event.data.until;',`            this.until = event.data.until;
+            if (!this.initialUntil) { this.initialUntil = this.until; this.initialCues = [...this.cues]; }`);
+edit('src/audio/MusicLookahead.ts','    this.advance(now);','    this.cues = this.cues.filter(cue => cue.time >= now - 2);\n    this.advance(now);');
+edit('src/audio/MusicLookahead.ts','this.worker.postMessage({ samples, sampleRate, offset, until },','this.worker.postMessage({ samples, sampleRate, offset, until, serial: this.serial },');
+edit('src/audio/MusicLookahead.ts',`    this.cursor = 0;
+    this.until = 0;
+    this.cues = [];
+    this.advance(0);`,`    this.serial++;
+    this.working = false;
+    this.cursor = this.initialUntil;
+    this.until = this.initialUntil;
+    this.cues = [...this.initialCues];
+    this.advance(0);`);
+edit('src/audio/MusicLookahead.ts','    this.generation++;','    this.generation++;\n    this.initialCues = [];\n    this.initialUntil = 0;');
+edit('src/audio/rhythm.worker.ts','until: number }>','until: number; serial: number }>');
+edit('src/audio/rhythm.worker.ts','const { samples, sampleRate, offset, until }', 'const { samples, sampleRate, offset, until, serial }');
+edit('src/audio/rhythm.worker.ts','sampleRate, offset), until }','sampleRate, offset), until, serial }');
+edit('src/core/gameplay/GameSim.ts','      stagedRamps.length = 0;',`      for (let i = stagedRamps.length - 1; i >= 0; i--) {
+        if (stagedRamps[i].gateId !== undefined || contextTime(this.opts) < 20) stagedRamps.splice(i, 1);
+      }`);
+edit('src/core/gameplay/GameSim.ts','contextTime(this.opts)', '(this.opts.getTrackTime?.() ?? player.gameTime)');
+edit('src/core/gameplay/GameSim.ts','        this.ramps, this.rhythmPlacementContext());','        [...this.ramps, ...stagedRamps], this.rhythmPlacementContext());');
+edit('src/core/gameplay/GameSim.ts','  private rhythmPlacementContext(): MusicPlacementContext {','  private rhythmPlacementContext(): MusicPlacementContext {');
+edit('src/core/gameplay/GameSim.ts','      if (this.shouldSuppressDestroyCarCoin(coin)) continue;', '      if (this.rhythmEnabled && coin.musicTarget === undefined && Math.abs(coin.id) % 4 !== 0) continue;\n      if (this.shouldSuppressDestroyCarCoin(coin)) continue;');

@@ -1,3 +1,4 @@
+import { MUSIC_PLANNING_DEFAULTS } from '../gameplay/musicPlanning';
 import { sfxFallback } from '../sfx/defaults';
 import type { Configs } from './schemas';
 
@@ -7,14 +8,14 @@ export const configFallbacks: Configs = {
     tutorial: {
       nitroArrowMinDistance: 25,
       nitroArrowMaxDistance: 40,
-      horseArrowMinTimeToObstacle: 2,
-      horseArrowMaxTimeToObstacle: 5,
+      horseArrowMinTimeToObstacle: 1.35,
+      horseArrowMaxTimeToObstacle: 3.2,
       horseJumpArrowMinTimeToObstacle: 1.3,
       horseJumpArrowMaxTimeToObstacle: 3,
-      slowMoStartTimeToContact: 0.82,
-      slowMoPassTimeoutSeconds: 0.5,
-      slowMoScale: 0.48,
-      slowMoBlendSeconds: 0.25,
+      slowMoStartTimeToContact: 0.58,
+      slowMoPassTimeoutSeconds: 0.2,
+      slowMoScale: 0.7,
+      slowMoBlendSeconds: 0.18,
       audioMinPlaybackRate: 0.68,
       audioPlaybackRatePower: 0.85,
       audioDetuneCents: -70,
@@ -68,6 +69,7 @@ export const configFallbacks: Configs = {
       yawMaxRadians: 0.62,
       yawRampSeconds: 0.42,
     },
+    musicPlanning: { ...MUSIC_PLANNING_DEFAULTS },
     musicScenes: {
       minArrivalSeconds: 2.4,
       maxArrivalSeconds: 4.0,
@@ -199,6 +201,8 @@ export const configFallbacks: Configs = {
       jumpPickupTargetProgress: 0.58,
       corridorSeconds: 1.4,
       postLandingRampCooldownSeconds: 5,
+      landingAdjustMaxSeconds: 1.5,
+      landingSafeSeconds: 1.0,
       coinSpacingSeconds: 0.07,
       coinsPerLaneSegment: 8,
       coinEndBufferSeconds: 0.22,
@@ -316,7 +320,7 @@ export const configFallbacks: Configs = {
       carTurnSpring: 150,
       carTurnDamping: 17,
       carTurnBodyYaw: 0.28,
-      carTurnBodyRoll: 0.14,
+      carTurnBodyRoll: 0.11,
       turnComboWindowSeconds: 0.35,
       turnMomentumDecaySeconds: 0.8,
       turnJellyScaleMax: 1.55,

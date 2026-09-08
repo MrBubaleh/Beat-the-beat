@@ -44,6 +44,13 @@ export class DirectorStateMachine {
     this._phaseElapsed = 0;
   }
 
+  copyFrom(other: DirectorStateMachine): void {
+    this._phase = other._phase;
+    this._phaseElapsed = other._phaseElapsed;
+    this.lastMajorEventAt = other.lastMajorEventAt;
+    Object.assign(this.cooldownUntil, other.cooldownUntil);
+  }
+
   reset(): void {
     this._phase = 'calm';
     this._phaseElapsed = 0;

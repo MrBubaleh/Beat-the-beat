@@ -8,6 +8,10 @@ import {
   type ComfortableCarRouteResult,
   type HorseRoutePoint,
 } from './passability';
+import {
+  horseToCarTransitionChunks,
+  horseToCarTransitionDensityScale,
+} from './modeTransition';
 import type { LevelgenConfig } from '@core/config/schemas';
 import { mulberry32 } from './prng';
 import { carTrafficScrollSpeed } from './trafficMotion';
@@ -25,6 +29,8 @@ import { HorsePhasePlanner, type HorsePhaseModifiers } from './horsePhases';
 import { compactGroundObstacles, type ObstacleCompactionConfig } from './obstacleCompaction';
 import { carHazardSpacingAllows } from './carHazardSpacing';
 import { lateRunProgress, lateSongEaseFactor, scaleTowardEnd } from './difficulty';
+import { certifyMusicPlacement, withinRunEnvelope, type MusicPlacementContext } from './musicPlacement';
+import type { RunEnvelope } from '../gameplay/musicPlanning';
 
 export interface DestroySpawnConfig {
   microClusterProbability: number;
@@ -71,6 +77,30 @@ export interface Chunk {
 }
 
 export class LevelGenerator {
+  private runEnvelope: RunEnvelope | null = null;
+
+  setRunEnvelope(envelope: RunEnvelope | null): void { this.runEnvelope = envelope; }
+
+  certifyMusicCandidate(obstacles: ObstacleEntity[], coins: CoinEntity[], ramps: RampEntity[], context: MusicPlacementContext): boolean {
+    return withinRunEnvelope(obstacles, this.config, context) &&
+      certifyMusicPlacement(obstacles, coins, ramps, this.config, context);
+  }
+
+  stageMusicBackground(published: ObstacleEntity[], staged: ObstacleEntity[], coins: CoinEntity[], ramps: RampEntity[], context: MusicPlacementContext): void {
+    const accepted = [...published];
+    const kept: ObstacleEntity[] = [];
+    for (const obstacle of staged) {
+      if (obstacle.redWall || obstacle.nitroMandatory) continue;
+      if (context.envelope.stage === 'warmup' && obstacle.kind !== 'micro' &&
+        (context.time ?? 0) + obstacle.z / carTrafficScrollSpeed(context.maxSpeed, obstacle.lane, this.config, obstacle) < 5.5) continue;
+      const candidate = [...accepted, obstacle];
+      if (!this.certifyMusicCandidate(candidate, coins, ramps, context)) continue;
+      kept.push(obstacle);
+      accepted.push(obstacle);
+    }
+    staged.splice(0, staged.length, ...kept);
+  }
+
   private nextId = 1;
   private nextGateId = 1;
   private nextChallengeId = 1;
@@ -128,6 +158,8 @@ export class LevelGenerator {
   private readonly horsePhasePlanner = new HorsePhasePlanner();
   private horseTownChunksRemaining = 0;
   private horseTownCooldownChunks = 0;
+  private horseToCarTransitionLeft = 0;
+  private rocketLanding: { lane: number; startZ: number; endZ: number } | null = null;
 
   constructor(
     private readonly config: LevelgenConfig,
@@ -189,6 +221,9 @@ export class LevelGenerator {
     this.trafficSpeed = Math.max(speed, 8);
     this.carFairnessMinSpeed = Math.min(Math.max(speed, 0.5), this.config.fairness.referenceSpeed);
     this.trafficNitroReady = nitroReady;
+    if (this.rocketLanding && this.rocketLanding.endZ < playerDistance) {
+      this.rocketLanding = null;
+    }
   }
 
   private effectiveWallProbability(): number {
@@ -398,6 +433,7 @@ export class LevelGenerator {
     if (mode !== 'car') {
       this.nitroActive = false;
       this.nitroReady = false;
+      this.horseToCarTransitionLeft = 0;
     }
     if (mode !== 'horse') this.horseMomentum = 0;
   }
@@ -410,11 +446,50 @@ export class LevelGenerator {
     this.horseConvertible = active;
   }
 
+  /**
+   * Начать переходный участок конь → машина: следующие N новых car-чанков
+   * генерируются разреженными и сертифицированными для машины.
+   * Опубликованные препятствия не трогаются.
+   */
+  beginHorseToCarTransition(): void {
+    this.horseToCarTransitionLeft = horseToCarTransitionChunks();
+  }
+
+  get horseToCarTransitionActive(): boolean {
+    return this.horseToCarTransitionLeft > 0;
+  }
+
+  /**
+   * Безопасная посадка ракеты: зарезервировать посадочный коридор в
+   * абсолютных координатах трека. Новые чанки внутри коридора идут
+   * разреженными вокруг посадочной полосы. Опубликованное не трогается.
+   */
+  reserveRocketLanding(lane: number, startZ: number, endZ: number): void {
+    this.rocketLanding = {
+      lane: clamp(lane, 0, this.config.lanes - 1),
+      startZ,
+      endZ,
+    };
+  }
+
+  clearRocketLanding(): void {
+    this.rocketLanding = null;
+  }
+
+  private rocketLandingReservedAt(z: number): number | null {
+    const reservation = this.rocketLanding;
+    if (!reservation || z < reservation.startZ || z > reservation.endZ) {
+      return null;
+    }
+    return reservation.lane;
+  }
+
   get seed(): number {
     return this.seedValue;
   }
 
   reset(seed: number): void {
+    this.runEnvelope = null;
     this.seedValue = seed;
     this.nextId = 1;
     this.nextGateId = 1;
@@ -449,6 +524,8 @@ export class LevelGenerator {
     this.pendingDodgeForceLane = null;
     this.horseTownChunksRemaining = 0;
     this.horseTownCooldownChunks = 0;
+    this.horseToCarTransitionLeft = 0;
+    this.rocketLanding = null;
     this.carPhasePlanner.reset();
     this.horsePhasePlanner.reset();
     this.trackTime = 0;
@@ -514,16 +591,23 @@ export class LevelGenerator {
     if (openingTraffic && category === 'empty' && index * numRows < config.earlyTraffic.rows) category = 'obstacle';
     const useObstacles = category === 'obstacle' || category === 'bonus';
     const densityScale = category === 'bonus' ? 0.5 : 1;
+    // Переход конь → машина: новые чанки идут разреженными, чтобы у машины
+    // был сертифицированный участок сразу после смены режима.
+    const transitionSparse = this.mode === 'car' && this.horseToCarTransitionLeft > 0;
     const density = this.clampDensity(
       (this.densityMultiplier * densityScale +
         this.longRunProgress * config.longRunDifficulty.maxDensityBonus) *
-        this.lateSongDensityEase(),
+        this.lateSongDensityEase() *
+        (transitionSparse ? horseToCarTransitionDensityScale() : 1),
     );
 
     for (let row = 0; row < numRows; row++) {
       const z = z0 + row * config.minGapZ;
       const globalRow = index * numRows + row;
       const earlyTraffic = globalRow < config.earlyTraffic.rows;
+      // Посадочный коридор ракеты: вокруг посадочной полосы и соседних —
+      // только разреженные одиночные препятствия вдали.
+      const landingReserved = this.rocketLandingReservedAt(z);
       const rowDensity = this.clampDensity(
         (density + (earlyTraffic ? config.earlyTraffic.densityBonus : 0)) *
           carModifiers.densityScale,
@@ -541,6 +625,8 @@ export class LevelGenerator {
         useObstacles &&
         wallAllowed &&
         redWallRampAllowed &&
+        !transitionSparse &&
+        landingReserved === null &&
         rng() < config.redWallProbability
       ) {
         const gateId = this.nextGateId++;
@@ -566,6 +652,8 @@ export class LevelGenerator {
         this.nitroActive &&
         nitroChallengeAllowed &&
         wallAllowed &&
+        !transitionSparse &&
+        landingReserved === null &&
         rng() <
           config.nitroWallProbability *
             (trafficCfg
@@ -578,6 +666,8 @@ export class LevelGenerator {
         this.nitroReady &&
         nitroChallengeAllowed &&
         wallAllowed &&
+        !transitionSparse &&
+        landingReserved === null &&
         rng() < config.nitroReadyChallengeProbability * carModifiers.nitroReadyChallengeMultiplier;
       if (activeNitroChallenge || readyNitroChallenge) {
         const mandatory = activeNitroChallenge
@@ -594,6 +684,8 @@ export class LevelGenerator {
         const wallProb = this.effectiveWallProbability();
         if (
           wallAllowed &&
+          !transitionSparse &&
+          landingReserved === null &&
           this.canSpawnWallAt(z) &&
           rng() < wallProb
         ) {
@@ -614,6 +706,8 @@ export class LevelGenerator {
           const commitmentLane = this.laneCommitmentStagnant(rng);
           if (
             commitmentLane !== null &&
+            !transitionSparse &&
+            landingReserved === null &&
             commitmentLane !== freeLane &&
             !this.groundLaneBlocked(obstacles, commitmentLane, z) &&
             this.laneTallRowStreakAt(commitmentLane) < 2 &&
@@ -633,6 +727,7 @@ export class LevelGenerator {
           }
           if (
             trafficCfg &&
+            landingReserved === null &&
             this.destroyNitroTrafficActive(z) &&
             rng() < trafficCfg.nitroSmashRowChance
           ) {
@@ -657,7 +752,7 @@ export class LevelGenerator {
             1,
           );
           const blockCount =
-            carModifiers.activePhase === 'stream'
+            transitionSparse || landingReserved !== null || carModifiers.activePhase === 'stream'
               ? 1
               : rng() < multiObstacleBias
                 ? 2
@@ -683,6 +778,11 @@ export class LevelGenerator {
               lane,
             );
             if (kind === null || (kind !== 'low' && kind !== 'tall')) continue;
+            // Переход конь → машина: высокие (красные) не ставим вовсе.
+            if (transitionSparse && kind === 'tall') continue;
+            // Посадочный коридор ракеты: посадочная полоса и соседи свободны.
+            if (landingReserved !== null && Math.abs(lane - landingReserved) < 2) continue;
+            if (landingReserved !== null && kind === 'tall') continue;
             if (
               !carHazardSpacingAllows(
                 obstacles,
@@ -772,7 +872,7 @@ export class LevelGenerator {
         this.finishCarObstacleRow([]);
       }
 
-      if (spawnObstacles && useObstacles && this.mode === 'car') {
+      if (spawnObstacles && useObstacles && this.mode === 'car' && landingReserved === null) {
         this.maybeSpawnShoulderPasser(obstacles, rng, z, globalRow);
       }
 
@@ -796,6 +896,8 @@ export class LevelGenerator {
         (useObstacles || earlyRampWindow) &&
         wallAllowed &&
         freeRampAllowed &&
+        !transitionSparse &&
+        landingReserved === null &&
         rng() < freeRampProbability
       ) {
         const freeLane = this.pickFreeLane(rng);
@@ -907,6 +1009,7 @@ export class LevelGenerator {
     );
     const exitLane = comfortRoute.route.at(-1)?.lane;
     if (exitLane !== undefined) this.constraintLane = exitLane;
+    if (transitionSparse) this.horseToCarTransitionLeft -= 1;
     return { index, obstacles, coins, ramps };
   }
 
@@ -2514,7 +2617,8 @@ export class LevelGenerator {
   }
 
   private clampDensity(density: number): number {
-    return clamp(density, this.config.densityRange[0], this.config.densityRange[1]);
+    const capped = clamp(density, this.config.densityRange[0], this.config.densityRange[1]);
+    return this.runEnvelope ? Math.min(capped, this.runEnvelope.densityCap) : capped;
   }
 
   private laneTallRowStreakAt(lane: number): number {

@@ -23,6 +23,8 @@ describe('mode portal bonus', () => {
     expect(size.y).toBeLessThan(PORTAL_RADIUS * 2.45);
     expect(size.z).toBeLessThan(PORTAL_RADIUS * 0.55);
     expect(portal.kind).toBe('horse');
+    expect(portal.silhouette).not.toBeNull();
+    expect(portal.silhouette!.children.length).toBeGreaterThanOrEqual(8);
     expect(portal.portalMaterial.uniforms.uTime.value).toBe(1.25);
     expect(getWestPostcardTexture()).toBeInstanceOf(THREE.Texture);
   });
@@ -31,6 +33,7 @@ describe('mode portal bonus', () => {
     const horse = createHorsePortal(PORTAL_RADIUS);
     const car = createCarPortal(PORTAL_RADIUS);
     expect(car.kind).toBe('car');
+    expect(car.silhouette).toBeNull();
     expect(car.radius).toBe(horse.radius);
     expect(car.rimMaterial.color.getHex()).not.toBe(horse.rimMaterial.color.getHex());
     expect(

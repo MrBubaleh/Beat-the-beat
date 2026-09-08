@@ -150,6 +150,32 @@ export class PlayerSim {
     gainAdrenaline(this.state, amount, this.cfg.adrenaline);
   }
 
+  predictTravel(times: readonly number[], flow: number, speedMultiplier: number | ((seconds: number) => number), smashTimes: readonly number[] = []): number[] {
+    const clone = new PlayerSim(this.cfg, this.startLane);
+    Object.assign(clone, this, { state: { ...this.state }, skillMomentumState: { ...this.skillMomentumState } });
+    const distances: number[] = [];
+    let elapsed = 0;
+    let distance = 0;
+    let smash = 0;
+    for (const target of times) {
+      while (elapsed < target - 1e-8) {
+        const dt = Math.min(1 / 60, target - elapsed);
+        clone.state.gameOver = false;
+        clone.update(dt, { laneDelta: 0, jump: false, nitro: false }, typeof speedMultiplier === 'number' ? speedMultiplier : speedMultiplier(elapsed + dt));
+        distance += Math.max(0.5, clone.state.speed + flow) * dt;
+        elapsed += dt;
+        while (smash < smashTimes.length && smashTimes[smash] <= elapsed) {
+          const cfg = this.cfg.destroy;
+          const early = 1 - clamp((clone.state.gameTime - cfg.earlyGreenSmashFullSeconds) / cfg.earlyGreenSmashFadeSeconds, 0, 1);
+          clone.applyGreenSmashSpeedBonus(cfg.greenSmashSpeedBonus * (1 + (cfg.earlyGreenSmashSpeedScale - 1) * early));
+          smash++;
+        }
+      }
+      distances.push(distance);
+    }
+    return distances;
+  }
+
   update(dt: number, input: ConsumedInput, speedMultiplier: number): LandingResult | null {
     const s = this.state;
     if (s.gameOver) return null;
@@ -701,6 +727,18 @@ export class PlayerSim {
 
   get rocketPreviousMode(): PlayerMode {
     return this.rocketReturnMode;
+  }
+
+  /**
+   * Безопасная посадка ракеты: умеренно продлить/сократить круиз в пределах
+   * ±maxAbsSeconds. Возвращает применённую поправку.
+   */
+  adjustRocketFlight(deltaSeconds: number, maxAbsSeconds: number): number {
+    if (this.state.mode !== 'rocket') return 0;
+    const limit = Math.max(0, maxAbsSeconds);
+    const clamped = clamp(deltaSeconds, -limit, limit);
+    this.state.rocketFuel = Math.max(0.5, this.state.rocketFuel + clamped);
+    return clamped;
   }
 
   consumeRocketExpired(): boolean {

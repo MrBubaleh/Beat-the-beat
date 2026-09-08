@@ -15,7 +15,7 @@ try {
   page.on('pageerror', error => report.errors.push(error.message));
   await page.goto(base + '/sfx-lab.html');
   await page.waitForFunction(() => Boolean(window.sfxLab));
-  const ids = ['hit','canister','smash','coin','nitroReady','nitroStart','nitroEnd','rocketPrepare','rocketLaunch','rocketEnd','jump','land','slideStart','slideEnd','lane','nearMiss','combo','mode','gameOver','hoof'];
+  const ids = ['hit','canister','smash','coin','nitroReady','nitroStart','nitroEnd','nitroDry','rocketPrepare','rocketLaunch','rocketEnd','jump','land','slideStart','slideEnd','lane','nearMiss','combo','mode','gameOver','hoof'];
   for (const id of ids) {
     const result = await page.evaluate(id => window.sfxLab.renderPatch(id), id);
     assert.equal(result.metrics.nonFinite, 0, id + ': non-finite audio');

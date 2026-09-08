@@ -138,7 +138,11 @@ export function bootstrap(container: HTMLElement): AppServices {
   let introMusicStarted = false;
   let introGoHideTimer: number | null = null;
 
+  const musicPlanningEnabled = resolvedGameCfg.musicPlanning.enabled && new URLSearchParams(location.search).get('music') !== 'legacy';
+  const requestedSeed = new URLSearchParams(location.search).get('seed');
   const sim = new GameSim({
+    musicPlanningEnabled,
+    seed: requestedSeed !== null && /^\d+$/.test(requestedSeed) ? Number(requestedSeed) >>> 0 : undefined,
     game: resolvedGameCfg,
     levelgen: levelgenCfg,
     gameplayRules: activeGameplayRulesId,
@@ -188,6 +192,7 @@ export function bootstrap(container: HTMLElement): AppServices {
   sim.setGhost(true);
 
   const audio = new AudioSession(audioCfg, resolvedGameCfg.tutorial);
+  audio.configureMusicPlanning({ ...resolvedGameCfg.musicPlanning, enabled: musicPlanningEnabled });
   audio.configureSfx(config.get('sfx'));
   audio.setMasterVolume(loadStoredMasterVolume());
   sim.sfxEvents.setCapacity(config.get('sfx').queueCapacity);
@@ -255,6 +260,9 @@ export function bootstrap(container: HTMLElement): AppServices {
     getMasterVolume: () => audio.getMasterVolume(),
     onMasterVolumeChange: (value) => {
       applyMasterVolume(value);
+    },
+    onPause: () => {
+      if (runPhase === 'running' && !playback) pauseRun();
     },
     onResume: () => {
       void resumeRun();
@@ -353,7 +361,8 @@ export function bootstrap(container: HTMLElement): AppServices {
       await startSongRun();
     },
     onLoadStart: () => {
-      if (mainMenu.isOpen) mainMenu.setBusy(true, 'загрузка…');
+      enterMenu();
+      mainMenu.setBusy(true, 'Загружаем трек…');
     },
     onError: (message) => {
       if (mainMenu.isOpen) mainMenu.setError(message);
@@ -463,7 +472,7 @@ export function bootstrap(container: HTMLElement): AppServices {
       } else {
         restartSimulation();
         scene.reset();
-        recorder.start(sim.seed, audio.trackDuration);
+        recorder.start(sim.seed, audio.trackDuration, { musicPlanningEnabled, gameplayRules: activeGameplayRulesId });
         showToast('recording… (R to stop)');
       }
     } else if (e.code === 'KeyR' && e.shiftKey) {
@@ -492,8 +501,10 @@ export function bootstrap(container: HTMLElement): AppServices {
     }
   });
 
+  audio.onPreparationProgress = message => { if (mainMenu.isOpen) mainMenu.setBusy(true, message); };
   const loop = new GameLoop({
     fixedUpdate: (dt) => {
+      if (musicPlanningEnabled && runPhase === 'countdown' && !sim.isLevelIntroActive()) return;
       if (!playback && (runPhase === 'running' || runPhase === 'countdown' || runPhase === 'menu')) {
         const mode = sim.playerSim.state.mode;
         if (mode !== tutorialMode || sim.gameOver || isTutorialRampFlight(sim.playerSim.state)) {
@@ -530,11 +541,27 @@ export function bootstrap(container: HTMLElement): AppServices {
         const elapsed = sim.getLevelIntroElapsed();
         const label = levelIntroCountdownLabel(elapsed, introCfg);
         hud.showCountdown(label);
-        if (elapsed >= introCfg.musicDelaySeconds && !introMusicStarted) {
+        if (!musicPlanningEnabled && elapsed >= introCfg.musicDelaySeconds && !introMusicStarted) {
           introMusicStarted = true;
           void audio.restart();
         }
-        if (elapsed >= introCfg.countdownSeconds) {
+        if (musicPlanningEnabled && elapsed >= introCfg.countdownSeconds && !introMusicStarted) {
+          introMusicStarted = true;
+          const sequence = countdownSequence;
+          void audio.play().then(() => {
+            if (sequence !== countdownSequence || runPhase !== 'countdown') return;
+            runPhase = 'running';
+            beginPlaytestRecording();
+            fpsTracker.reset();
+            audioControls.setStatus('playing');
+            hud.showCountdown(null);
+          }).catch(() => {
+            if (sequence !== countdownSequence) return;
+            enterMenu();
+            mainMenu.setError('Нажмите на трек ещё раз, чтобы разрешить воспроизведение');
+          });
+        }
+        if (!musicPlanningEnabled && elapsed >= introCfg.countdownSeconds) {
           runPhase = 'running';
           beginPlaytestRecording();
           fpsTracker.reset();
@@ -672,7 +699,7 @@ export function bootstrap(container: HTMLElement): AppServices {
         nitro: (snapshot.player.nitroCharge / snapshot.nitroMaxFill) * 100,
         fx: scene.fxDiagnostics(),
         musicPattern: snapshot.musicPattern ?? '-',
-        musicScene: snapshot.musicScene
+        musicScene: snapshot.musicTiming ? `${snapshot.runStage} ${snapshot.musicAnalysis} planned ${snapshot.musicTiming.planned} measured ${snapshot.musicTiming.samples} rejected ${snapshot.musicTiming.rejected} hit ${Math.round((snapshot.musicTiming.hitShare ?? 0) * 100)}% median ${snapshot.musicTiming.medianMs?.toFixed(0) ?? '—'}ms p95 ${snapshot.musicTiming.p95Ms?.toFixed(0) ?? '—'}ms` : snapshot.musicScene
           ? `${snapshot.musicScene.kind} ${snapshot.musicScene.reason} ` +
             `in ${snapshot.musicScene.remainingSeconds.toFixed(1)}s ` +
             `route ${snapshot.musicScene.routeHint} [${snapshot.musicScene.guideLanes.join(',')}] ` +

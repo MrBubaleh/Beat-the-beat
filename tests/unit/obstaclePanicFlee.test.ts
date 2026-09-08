@@ -41,6 +41,14 @@ describe('obstaclePanicFlee', () => {
     expect(startObstaclePanicFlee(tooClose, laneFlow, lanePositions, cfg)).toBe(false);
   });
 
+  it('animates a mandatory traffic escape instead of deleting it outside the band', () => {
+    const tooClose: ObstacleEntity = { id: 5, kind: 'low', lane: 1, z: 8 };
+    expect(startObstaclePanicFlee(tooClose, laneFlow, lanePositions, cfg, true)).toBe(true);
+    expect(tooClose).toMatchObject({ panicFleeActive: true, collisionIgnored: true });
+    updateObstaclePanicFlees([tooClose], 0.25, laneFlow, cfg);
+    expect(Math.abs(tooClose.xOffset ?? 0)).toBeGreaterThan(0);
+  });
+
   it('marks removal after duration elapses', () => {
     const obstacle: ObstacleEntity = { id: 4, kind: 'low', lane: 2, z: 30 };
     startObstaclePanicFlee(obstacle, laneFlow, lanePositions, cfg);

@@ -227,6 +227,29 @@ body {
   margin-top: clamp(16px, 3vw, 24px);
 }
 
+.menu-hints {
+  margin-top: clamp(10px, 2vw, 16px);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: #8ba3ad;
+  text-align: center;
+}
+
+.menu-hints-touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .menu-hints-desktop {
+    display: none;
+  }
+
+  .menu-hints-touch {
+    display: block;
+  }
+}
+
 .menu-status {
   min-height: 1.2em;
   font-size: 13px;
@@ -377,6 +400,32 @@ body {
   font-weight: 700;
   color: #7de7ff;
   text-shadow: 0 0 28px #149dcc;
+}
+
+.hud-pause-btn {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(125, 231, 255, 0.4);
+  border-radius: 10px;
+  background: rgba(4, 10, 16, 0.55);
+  color: #d7f6ff;
+  font-size: 18px;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .hud-root:not(.is-paused) .hud-pause-btn {
+    display: flex;
+  }
 }
 
 .hud-pause {
@@ -582,3 +631,10 @@ body {
     transition: none;
   }
 }
+
+.menu-root.is-preparing .menu-status::before {
+  content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 10px;
+  border: 2px solid #ffffff30; border-top-color: #55e9e2; border-radius: 50%;
+  vertical-align: middle; animation: rhythm-loading 0.85s linear infinite;
+}
+@keyframes rhythm-loading { to { transform: rotate(360deg); } }

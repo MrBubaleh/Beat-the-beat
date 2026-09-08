@@ -10,6 +10,8 @@ import { isValidIntentTarget } from './intentTargets';
 import { TransitionScorer } from './TransitionScorer';
 import type { DirectorOutput } from './types';
 
+import { requestMusicalPatterns } from '../gameplay/musicPatterns';
+
 export class ActiveDirector {
   readonly memory = new DirectorMemory();
   private readonly fsm: DirectorStateMachine;
@@ -17,6 +19,8 @@ export class ActiveDirector {
   private readonly validator: ConstraintValidator;
   private readonly config: DirectorConfig;
   private sectionEnergy = 0.5;
+  private speedPlan: { time: number; value: number }[] = [];
+  private speedPlanAt = -Infinity;
 
   constructor(config: DirectorConfig) {
     this.config = config;
@@ -61,13 +65,30 @@ export class ActiveDirector {
 
     const intents = this.emitIntents(now, music);
     this.memory.record(intents);
-    return { intents, phase: this.fsm.phase, phaseElapsed: this.fsm.phaseElapsed };
+    if (music.forecast && music.forecast.now >= this.speedPlanAt + 0.5) {
+      const preview = new ActiveDirector(this.config);
+      preview.fsm.copyFrom(this.fsm);
+      preview.sectionEnergy = this.sectionEnergy;
+      this.speedPlan = [];
+      const forecast = music.forecast;
+      for (let after = 0.1; after <= 7; after += 0.1) {
+        const time = forecast.now + after * forecast.rate;
+        const energy = forecast.energy?.filter(frame => frame.time <= time).at(-1)?.value ?? Number(music.energy.value);
+        const future = preview.update(0.1, now + after, { ...music, forecast: undefined, energy: { value: energy, audioTime: time } }, stress);
+        this.speedPlan.push({ time, value: Number(future.intents.find(intent => intent.target === 'speed')?.value ?? 1) });
+      }
+      this.speedPlanAt = forecast.now;
+    }
+    return { intents, speedPlan: music.forecast ? this.speedPlan : undefined, phase: this.fsm.phase, phaseElapsed: this.fsm.phaseElapsed,
+      patterns: music.forecast ? requestMusicalPatterns(music.forecast, this.sectionEnergy) : undefined };
   }
 
   reset(): void {
     this.fsm.reset();
     this.memory.clear();
     this.sectionEnergy = 0.5;
+    this.speedPlan = [];
+    this.speedPlanAt = -Infinity;
   }
 
   private applyForcedTransitions(now: number): void {

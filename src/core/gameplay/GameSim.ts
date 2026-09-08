@@ -1,3 +1,5 @@
+import { runEnvelope, MusicTimingMetrics, type MusicalPatternRequest, type MusicForecast } from './musicPlanning';
+import type { MusicPlacementContext } from '../levelgen/musicPlacement';
 import { SfxEventQueue } from '@core/sfx/SfxEventQueue';
 import type { SfxState } from '@core/sfx/types';
 import type { GameConfig, LevelgenConfig } from '@core/config/schemas';
@@ -14,6 +16,10 @@ import type {
 import { carTrafficScrollSpeed } from '@core/levelgen/trafficMotion';
 import { LevelGenerator } from '@core/levelgen/LevelGenerator';
 import { isPassableAsCarTemporal } from '@core/levelgen/passability';
+import {
+  horseLeftoverGuideHorizonZ,
+  planHorseToCarGuides,
+} from '@core/levelgen/modeTransition';
 import { startLane } from '@core/levelgen/startLane';
 import {
   lateRunProgress,
@@ -44,7 +50,7 @@ import {
   isTrainRoofBlockingHorsePath,
   playerTrainOffset,
 } from './trainHorseOffer';
-import { addNitroCharge } from './nitro';
+import { addNitroCharge, NITRO_DRY_COOLDOWN_SECONDS, NITRO_DRY_PULSE_SECONDS } from './nitro';
 import {
   applySalvationTopUp,
   qualifiesForSalvation,
@@ -70,6 +76,7 @@ import {
   rocketDistanceAtTime,
   rocketFallStartTime,
 } from './rocket';
+import { planRocketLanding } from './rocketLanding';
 import { buildHitEvent, buildModeEvent } from '@core/playtest/buildEvents';
 import type { PlaytestEvent, ObstacleRef } from '@core/playtest/types';
 import type { DamageState } from './health';
@@ -84,6 +91,7 @@ import {
 } from './levelIntro';
 
 export interface GameSimOptions {
+  musicPlanningEnabled?: boolean;
   game: GameConfig;
   levelgen: LevelgenConfig;
   director: Director;
@@ -99,6 +107,9 @@ export interface GameSimOptions {
 }
 
 export interface GameSnapshot {
+  musicTiming?: ReturnType<MusicTimingMetrics['snapshot']>;
+  runStage?: string;
+  musicAnalysis?: string;
   player: PlayerState;
   obstacles: ObstacleEntity[];
   horseBlasterActive: boolean;
@@ -112,6 +123,7 @@ export interface GameSnapshot {
   nearMissFx: readonly { x: number; y: number; z: number }[];
   dodgeFx: readonly DodgeFxEvent[];
   salvationFlash: number;
+  nitroDryPulse: number;
   bonusPicked: BonusKind | null;
   scoreMeters: number;
   scoreCoins: number;
@@ -240,6 +252,14 @@ export class GameSim {
   private nextTrainId = -200000;
   private nextTrainObstacleId = -300000;
   private protectedRampGateId: number | null = null;
+  private timingMetrics = new MusicTimingMetrics();
+  private nextRhythmTime = 0;
+  private lastRhythmBeat = -1;
+  private rhythmSequence = 0;
+  private rhythmTracked = new Map<number, { entity: CoinEntity | ObstacleEntity; contact: number; previousZ: number }>();
+  private rhythmForecast: MusicForecast | null = null;
+  private rhythmSpeedPlan: readonly { time: number; value: number }[] = [];
+  private get rhythmEnabled(): boolean { return Boolean(this.opts.musicPlanningEnabled && this.opts.game.musicPlanning.enabled); }
   private pendingMusicScene: MusicSceneRequest | null = null;
   private musicSceneCooldown = 0;
   private previousMusicEnergy = 0.5;
@@ -267,6 +287,7 @@ export class GameSim {
   private rocketSpawnCooldown = 0;
   private rocketOfferElapsed = 0;
   private rocketLastPickupProgress = -1;
+  private rocketLandingAdjustSeconds = 0;
   private firstHorseTransformGameTime: number | null = null;
   private totalHits = 0;
   private nitroActivations = 0;
@@ -299,6 +320,8 @@ export class GameSim {
   private readonly nearMissFx: { x: number; y: number; z: number }[] = [];
   private readonly dodgeFx: DodgeFxEvent[] = [];
   private salvationFlashTimer = 0;
+  private nitroDryPulseTimer = 0;
+  private nitroDryCooldownTimer = 0;
   private prevRocketPhase: RocketPhase = 'none';
   private laneStickSeconds = 0;
   private laneStickLane = 0;
@@ -401,6 +424,11 @@ export class GameSim {
     return this.generator.seed;
   }
 
+  /** Поправка длительности последнего полёта ракеты (секунды круиза). */
+  get lastRocketLandingAdjustSeconds(): number {
+    return this.rocketLandingAdjustSeconds;
+  }
+
   get mode(): PlayerMode {
     return this.modeController.mode;
   }
@@ -458,6 +486,11 @@ export class GameSim {
   }
 
   beginLevelIntro(): void {
+    if (this.rhythmEnabled) {
+      this.levelIntroActive = true;
+      this.levelIntroElapsed = 0;
+      return;
+    }
     const introCfg = this.opts.game.levelIntro;
     const speeds = this.opts.game.speeds;
     const targetSpeed = levelIntroTargetSpeed(speeds.base, speeds.rampPerSecond, introCfg);
@@ -500,6 +533,10 @@ export class GameSim {
     if (this.salvationFlashTimer > 0) {
       this.salvationFlashTimer = Math.max(0, this.salvationFlashTimer - dt);
     }
+    if (this.nitroDryPulseTimer > 0) {
+      this.nitroDryPulseTimer = Math.max(0, this.nitroDryPulseTimer - dt);
+    }
+    this.nitroDryCooldownTimer = Math.max(0, this.nitroDryCooldownTimer - dt);
     if (this.greenSmashStackTimer > 0) {
       this.greenSmashStackTimer = Math.max(0, this.greenSmashStackTimer - dt);
       if (this.greenSmashStackTimer <= 0) this.greenSmashStacks = 0;
@@ -516,16 +553,31 @@ export class GameSim {
 
     if (input.nitro && player.mode === 'car') {
       this.playerSim.activateNitro();
+      if (
+        !player.isAbilityActive &&
+        !this.playerSim.nitroReady &&
+        !this.ghost &&
+        this.nitroDryCooldownTimer <= 0
+      ) {
+        this.nitroDryCooldownTimer = NITRO_DRY_COOLDOWN_SECONDS;
+        this.nitroDryPulseTimer = NITRO_DRY_PULSE_SECONDS;
+        this.sfxEvents.emit('nitroDry', this.getSfxState(), 0.6);
+      }
       this.sfxEvents.observe(this.getSfxState());
     }
 
     const music = this.opts.getMusic();
+    this.rhythmForecast = this.rhythmEnabled ? music.forecast ?? null : null;
+    const envelope = runEnvelope(this.opts.getTrackTime?.() ?? player.gameTime,
+      this.opts.getTrackDuration?.() ?? 0, this.opts.game.musicPlanning);
+    this.generator.setRunEnvelope(this.rhythmEnabled ? envelope : null);
     this.songProgress = clamp(this.opts.getSongProgress?.() ?? 0, 0, 1);
     this.musicEnergy = Number(music.energy.value);
     this.musicBrightness = Number(music.brightness.value);
     this.musicSilence = Boolean(music.silence.value);
     const pulseCfg = this.opts.game.pulse;
-    if (music.beat.value) {
+    if (music.beat.value && (!this.rhythmEnabled || music.beat.audioTime !== this.lastRhythmBeat)) {
+      this.lastRhythmBeat = music.beat.audioTime;
       this.pulse = 1;
       this.strongPulse =
         Number(music.energy.value) >= pulseCfg.strongBeatEnergyThreshold ? 1 : 0;
@@ -540,6 +592,7 @@ export class GameSim {
       music,
       player.stressEstimate,
     );
+    this.rhythmSpeedPlan = directorOutput.speedPlan ?? [];
     const phase = directorOutput.phase;
     const phaseChanged = phase !== this.prevPhase;
     this.modeSwitchElapsed += dt;
@@ -568,7 +621,9 @@ export class GameSim {
     const densityIntent = directorOutput.intents.find((intent) => intent.target === 'obstacleDensity');
     const coinIntent = directorOutput.intents.find((intent) => intent.target === 'coinFrequency');
     const vfxIntent = directorOutput.intents.find((intent) => intent.target === 'vfxIntensity');
-    const speedMultiplier = numberOr(speedIntent?.value, 1);
+    const speedMultiplier = this.rhythmEnabled
+      ? Math.min(envelope.speedIntentCap, numberOr(speedIntent?.value, 1))
+      : numberOr(speedIntent?.value, 1);
     const densityMultiplier = numberOr(densityIntent?.value, 0.4);
     this.requestedDensity = densityMultiplier;
     this.lastVfxIntensity =
@@ -587,7 +642,8 @@ export class GameSim {
       player.speed,
     );
 
-    const effectiveMultiplier = speedMultiplier * this.updateTurbo(dt, music);
+    const turboMultiplier = this.updateTurbo(dt, music);
+    const effectiveMultiplier = speedMultiplier * (this.rhythmEnabled ? 1 : turboMultiplier);
 
     this.updateTrainLandingTarget(dt);
     const wasTrainRoof = player.airState === 'trainRoof';
@@ -690,11 +746,14 @@ export class GameSim {
     this.updateTrainRide(dt, wasTrainRoof, laneBeforeUpdate);
     this.generator.setHorseMomentum(player.mode === 'horse' ? player.horseMomentum : 0);
     this.syncHorseConvertible();
+    if (this.rhythmEnabled && this.rhythmForecast) this.scheduleRhythmPatterns(directorOutput.patterns ?? [], this.rhythmForecast);
     this.ensureChunks();
     this.syncTrackEndObstacles();
     this.maybeSpawnCarPortal(phase);
-    this.spawnPendingMusicPattern();
-    this.maybeSpawnMusicEcho(music);
+    if (!this.rhythmEnabled) {
+      this.spawnPendingMusicPattern();
+      this.maybeSpawnMusicEcho(music);
+    }
     this.updateRampAvailability(dt);
     this.ensureEarlyRampGuide();
 
@@ -849,6 +908,7 @@ export class GameSim {
       this.switchPlayerMode('rocket');
       this.emitPlaytestBonus('rocket');
       this.spawnRocketTrajectories();
+      this.planRocketLandingWindow();
     }
     if (player.mode === 'rocket' && this.playerSim.consumeRocketExpired()) {
       this.finishRocketFlight();
@@ -949,6 +1009,7 @@ export class GameSim {
       this.opts.game.coin.value,
       comboMultiplier(this.comboSystem.combo, this.opts.game.combo),
     );
+    if (this.rhythmEnabled) this.measureRhythmEvents();
     if (player.damageState !== 'normal') {
       this.woundedSeconds += dt;
     }
@@ -956,6 +1017,12 @@ export class GameSim {
   }
 
   restart(): void {
+    this.timingMetrics = new MusicTimingMetrics();
+    this.nextRhythmTime = 0;
+    this.lastRhythmBeat = -1;
+    this.rhythmSequence = 0;
+    this.rhythmTracked.clear();
+    this.rhythmForecast = null;
     this.sfxEvents.reset();
     this.generator.reset(this.fixedSeed ?? newSeed());
     this.obstacles.length = 0;
@@ -1001,6 +1068,8 @@ export class GameSim {
     this.horseCoinRewardedGroups.clear();
     this.nitroActive = false;
     this.nitroReady = false;
+    this.nitroDryPulseTimer = 0;
+    this.nitroDryCooldownTimer = 0;
     this.lastComboWasSmash = false;
     this.nextAirCoinId = -1;
     this.nextAirPathId = 1;
@@ -1039,6 +1108,7 @@ export class GameSim {
     this.rocketSpawnCooldown = 0;
     this.rocketOfferElapsed = 0;
     this.rocketLastPickupProgress = -1;
+    this.rocketLandingAdjustSeconds = 0;
     this.firstHorseTransformGameTime = null;
     this.prevRocketPhase = 'none';
     this.totalHits = 0;
@@ -1087,11 +1157,16 @@ export class GameSim {
     const dodgeFx = this.dodgeFx.splice(0, this.dodgeFx.length);
     const salvationFlash = this.salvationFlashTimer;
     return {
+      musicAnalysis: this.rhythmForecast?.source,
+      musicTiming: this.rhythmEnabled ? this.timingMetrics.snapshot(this.opts.game.musicPlanning.hitWindowMs) : undefined,
+      runStage: this.rhythmEnabled ? runEnvelope(this.opts.getTrackTime?.() ?? player.gameTime,
+        this.opts.getTrackDuration?.() ?? 0).stage : undefined,
       player,
       coinPickups,
       nearMissFx,
       dodgeFx,
       salvationFlash,
+      nitroDryPulse: this.nitroDryPulseTimer,
       obstacles: this.obstacles,
       horseBlasterActive: this.isHorseBlasterActive(),
       activeHorseSlideGroupId: this.findActiveHorseSlideGroupId(),
@@ -1166,8 +1241,10 @@ export class GameSim {
     const speed = levelIntroSpeedAt(this.levelIntroElapsed, targetSpeed, introCfg);
     this.playerSim.applyLevelIntroMotion(dt, speed);
     this.scrollWorld(speed, dt);
-    this.ensureChunks();
-    this.reconcileLevelIntroObstacle();
+    if (!this.rhythmEnabled) {
+      this.ensureChunks();
+      this.reconcileLevelIntroObstacle();
+    }
     if (this.levelIntroElapsed >= introCfg.countdownSeconds) {
       this.completeLevelIntro(targetSpeed, introCfg.countdownSeconds);
     }
@@ -2286,6 +2363,7 @@ export class GameSim {
   }
 
   private syncTrackEndObstacles(): void {
+    if (this.rhythmEnabled) return;
     const duration = this.opts.getTrackDuration?.() ?? 0;
     const time = this.opts.getTrackTime?.() ?? 0;
     if (duration <= 0) return;
@@ -2304,6 +2382,7 @@ export class GameSim {
   }
 
   private ensureChunks(): void {
+    if (this.rhythmEnabled && !this.ghost && !this.rhythmForecast) return;
     const distance = this.playerSim.state.distance;
     const chunkLength = this.levelgen.chunkLength;
     const currentChunk = Math.floor(distance / chunkLength);
@@ -2331,6 +2410,13 @@ export class GameSim {
       stagedSceneryZones.push(...(chunk.sceneryZones ?? []));
     }
     this.updateRampAvailability(0, stagedObstacles, stagedRamps);
+    if (this.rhythmEnabled && player.mode === 'car') {
+      for (let i = stagedRamps.length - 1; i >= 0; i--) {
+        if (stagedRamps[i].gateId !== undefined || (this.opts.getTrackTime?.() ?? player.gameTime) < 20) stagedRamps.splice(i, 1);
+      }
+      this.generator.stageMusicBackground(this.obstacles, stagedObstacles, this.coins,
+        [...this.ramps, ...stagedRamps], this.rhythmPlacementContext());
+    }
     if (player.mode === 'car') {
       const horizonObstacles = [...this.obstacles, ...stagedObstacles];
       const horizonRamps = [...this.ramps, ...stagedRamps];
@@ -2376,13 +2462,14 @@ export class GameSim {
       [...this.ramps, ...stagedRamps],
       this.levelgen.contentStartZ + (this.lastGenerated + 1) * chunkLength - distance,
     );
-    stagedObstacles.push(...opening.obstacles);
+    if (!this.rhythmEnabled) stagedObstacles.push(...opening.obstacles);
     stagedCoins.push(...opening.coins);
     this.obstacles.push(...stagedObstacles);
     this.ramps.push(...stagedRamps);
     this.sceneryZones.push(...stagedSceneryZones);
     const publishedRampIds = new Set(this.ramps.map((ramp) => ramp.id));
     for (const coin of stagedCoins) {
+      if (this.rhythmEnabled && coin.musicTarget === undefined && Math.abs(coin.id) % 4 !== 0) continue;
       if (this.shouldSuppressDestroyCarCoin(coin)) continue;
       if (
         coin.rampGuideId !== undefined &&
@@ -2490,6 +2577,120 @@ export class GameSim {
   private removeRampGuideCoin(rampId: number): void {
     for (let i = this.coins.length - 1; i >= 0; i--) {
       if (this.coins[i].rampGuideId === rampId) this.coins.splice(i, 1);
+    }
+  }
+
+  private rhythmPlacementContext(): MusicPlacementContext {
+    const player = this.playerSim.state;
+    return { time: this.opts.getTrackTime?.() ?? player.gameTime, speed: Math.max(player.speed, this.opts.game.speeds.base),
+      minSpeed: this.opts.game.speeds.min,
+      maxSpeed: Math.max(player.speed, this.levelgen.fairness.referenceSpeed, this.opts.game.speeds.max * (1 + this.opts.game.skillMomentum.maxBonus)),
+      entryLane: player.lane,
+      envelope: runEnvelope(this.opts.getTrackTime?.() ?? player.gameTime,
+        this.opts.getTrackDuration?.() ?? 0, this.opts.game.musicPlanning) };
+  }
+
+  private scheduleRhythmPatterns(requests: MusicalPatternRequest[], forecast: MusicForecast): void {
+    const player = this.playerSim.state;
+    if (this.ghost || player.mode !== 'car' || player.airState !== 'grounded' || this.trains.some(train => train.z + train.length / 2 > 0)) return;
+    const cfg = this.opts.game.musicPlanning;
+    const rate = Math.max(0.25, forecast.rate);
+    const earliest = Math.max(this.nextRhythmTime, forecast.now + cfg.minLeadSeconds * rate);
+    const duration = this.opts.getTrackDuration?.() ?? 0;
+    const candidates = requests.filter(request => request.cue.time >= earliest &&
+      request.cue.time <= forecast.now + cfg.maxLeadSeconds * rate && request.cue.time <= forecast.availableUntil &&
+      (duration <= 0 || request.cue.time < duration - this.levelgen.trackEndObstacleStopSeconds));
+    if (!candidates.length) return;
+    const context = this.rhythmPlacementContext();
+    const actionAllowed = earliest >= 5 && (this.rhythmSequence % 2 === 1 || candidates[0].kind === 'dodge');
+    for (let attempt = 0; attempt < Math.min(3, candidates.length); attempt++) {
+      const request = candidates[attempt];
+      const accents = request.accents.filter((cue, i, all) => cue.time <= forecast.availableUntil &&
+        (duration <= 0 || cue.time < duration - this.levelgen.trackEndObstacleStopSeconds) &&
+        (i === 0 || cue.time - all[i - 1].time >= 0.28 * rate)).slice(0, 4);
+      if (accents.length < 2) continue;
+      for (const useAction of actionAllowed ? [true, false] : [false]) {
+        const lanes = [player.lane, ...Array.from({ length: this.levelgen.lanes }, (_, lane) => lane)
+          .filter(lane => lane !== player.lane).sort((a, b) => Math.abs(a - player.lane) - Math.abs(b - player.lane))];
+        for (const lane of lanes) {
+          const direction = ((this.generator.seed ^ this.rhythmSequence) & 1) === 0 ? 1 : -1;
+          const neighbor = lane + direction < 0 || lane + direction >= this.levelgen.lanes ? lane - direction : lane + direction;
+          const targetLane = useAction ? neighbor : lane;
+          const coins: CoinEntity[] = [];
+          const obstacles: ObstacleEntity[] = [];
+          const tracked: Array<{ entity: CoinEntity | ObstacleEntity; contact: number; previousZ: number }> = [];
+
+          const times = accents.map(cue => (cue.time - forecast.now) / rate);
+          const smashTimes = this.gameplayRules === 'destroy' ? [...[...this.rhythmTracked.values()]
+            .filter(entry => 'kind' in entry.entity && entry.entity.kind === 'micro')
+            .map(entry => (entry.entity.musicTarget!.time - forecast.now) / rate), ...times]
+            .filter(time => time > 0).sort((a, b) => a - b) : [];
+          const travel = Array.from({ length: this.levelgen.lanes }, (_, lane) =>
+            this.playerSim.predictTravel(times, this.laneFlowFor(lane) * this.levelgen.multiLaneFlowFactor, seconds => {
+              const time = forecast.now + seconds * rate;
+              const desired = this.rhythmSpeedPlan.find(frame => frame.time >= time)?.value ?? this.lastSpeedMultiplier;
+              return Math.min(desired, runEnvelope(time, duration, cfg).speedIntentCap);
+            }, smashTimes));
+          for (let i = 0; i < accents.length; i++) {
+            const cue = accents[i];
+            const pickupLane = useAction ? targetLane : lane;
+
+            const micro = this.gameplayRules === 'destroy';
+            const contact = micro
+              ? (this.opts.game.obstacle.lowDepth * this.opts.game.obstacle.microDepthScale + this.opts.game.player.depth) / 2 - this.opts.game.hit.zGrace
+              : this.opts.game.player.depth / 2 + this.opts.game.coin.collectGrace + this.opts.game.coin.radius;
+            const z = travel[pickupLane][i] + contact;
+            const musicTarget = { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'collect' as const };
+            const flowGroupId = this.nextMusicGateId;
+            const entity: CoinEntity | ObstacleEntity = micro
+              ? { id: this.nextMusicEntityId--, kind: 'micro', lane: pickupLane, z, flowGroupId, routeGuide: true, musicTarget }
+              : { id: this.nextMusicEntityId--, lane: pickupLane, z, flowGroupId, y: this.levelgen.coinHeight, collected: false, routeKind: 'sceneGuide', musicTarget };
+            if ('kind' in entity) obstacles.push(entity); else coins.push(entity);
+            tracked.push({ entity, contact, previousZ: z });
+          }
+          if (useAction && accents.length >= 3) {
+            const cue = accents[1];
+            const z = travel[lane][1];
+            const hazard: ObstacleEntity = { id: this.nextMusicEntityId--, kind: 'tall', lane, z, flowGroupId: this.nextMusicGateId,
+              zExtent: this.opts.game.obstacle.tallDepth,
+              musicTarget: { time: cue.time, cueId: cue.id, confidence: cue.confidence, role: 'dodge' } };
+            obstacles.push(hazard);
+            tracked.push({ entity: hazard, contact: 0, previousZ: z });
+          }
+          if (!this.generator.certifyMusicCandidate([...this.obstacles, ...obstacles], [...this.coins, ...coins], this.ramps, context)) continue;
+          this.obstacles.push(...obstacles);
+          this.coins.push(...coins);
+          for (const entry of tracked) this.rhythmTracked.set(entry.entity.id, entry);
+          this.timingMetrics.planned += tracked.length;
+          if (attempt > 0) this.timingMetrics.shifted++;
+          if (actionAllowed && !useAction) this.timingMetrics.simplified++;
+          this.nextMusicGateId--;
+          this.rhythmSequence++;
+          this.nextRhythmTime = accents.at(-1)!.time + 1.0 * rate;
+          return;
+        }
+      }
+      this.timingMetrics.rejected++;
+    }
+    this.nextRhythmTime = candidates[0].cue.time + 0.3;
+  }
+
+  private measureRhythmEvents(): void {
+    const now = this.rhythmForecast?.now ?? this.opts.getTrackTime?.() ?? 0;
+    for (const [id, entry] of this.rhythmTracked) {
+      const entity = entry.entity;
+      const target = entity.musicTarget!;
+      const collected = 'collected' in entity ? entity.collected : Boolean(entity.smashed && !entity.crushBroken);
+      const passed = entity.z <= 0;
+      const expired = now > target.time + 12;
+      if (!collected && !passed && !expired) { entry.previousZ = entity.z; continue; }
+      const performed = target.role === 'dodge'
+        ? passed && this.playerSim.state.lane !== entity.lane && !('broken' in entity && entity.broken)
+        : collected;
+      const relativeSpeed = carTrafficScrollSpeed(this.playerSim.state.speed, entity.lane, this.levelgen, entity);
+      const crossing = now + Math.min(0, (entity.z - entry.contact) / relativeSpeed) * (this.rhythmForecast?.rate ?? 1);
+      this.timingMetrics.record(crossing, target.time, performed, target.confidence >= this.opts.game.musicPlanning.confidenceThreshold);
+      this.rhythmTracked.delete(id);
     }
   }
 
@@ -2620,7 +2821,7 @@ export class GameSim {
     phase: MusicSceneRequest['phase'],
     reason: MusicSceneRequest['reason'],
   ): void {
-    if (this.musicSceneCooldown > 0 || this.pendingMusicScene !== null) return;
+    if (this.rhythmEnabled || this.musicSceneCooldown > 0 || this.pendingMusicScene !== null) return;
     this.pendingMusicScene = { phase, reason };
   }
 
@@ -3015,33 +3216,58 @@ export class GameSim {
     }
   }
 
+  /**
+   * Безопасная посадка ракеты: заранее выбрать окно посадки, умеренно
+   * скорректировать длительность полёта (в пределах конфига) и зарезервировать
+   * посадочный коридор в генераторе. Видимые препятствия не трогаются,
+   * управление у игрока остаётся.
+   */
+  private planRocketLandingWindow(): void {
+    const player = this.playerSim.state;
+    const cfg = this.opts.game.rocket;
+    const speed = Math.max(player.speed, 1);
+    const baseDistance = rocketDistanceAtTime(rocketFallStartTime(cfg), player.speed, cfg);
+    const plan = planRocketLanding({
+      baseDistance,
+      returnSpeed: speed,
+      cruiseBoost: cfg.speedBoost,
+      lane: player.lane,
+      obstacles: this.obstacles,
+      ramps: this.ramps,
+      config: this.levelgen,
+      game: this.opts.game,
+    });
+    this.rocketLandingAdjustSeconds = this.playerSim.adjustRocketFlight(
+      plan.adjustSeconds,
+      cfg.landingAdjustMaxSeconds,
+    );
+    const landingDist =
+      baseDistance +
+      this.rocketLandingAdjustSeconds * speed * cfg.speedBoost;
+    const margin = Math.max(this.opts.game.player.depth * 2, speed * 0.3);
+    this.generator.reserveRocketLanding(
+      plan.landingLane,
+      player.distance + landingDist - margin,
+      player.distance + landingDist + speed * cfg.corridorSeconds,
+    );
+  }
+
   private finishRocketFlight(): void {
     const returnMode = this.playerSim.rocketPreviousMode;
     this.switchPlayerMode(returnMode);
     this.sfxEvents.emit('land', this.getSfxState(), returnMode === 'horse' ? 0.4 : 0.65);
-    this.clearRocketReturnCorridor(this.playerSim.state.lane);
+    // Видимые препятствия не удаляем: безопасность обеспечена заранее
+    // выбранным окном посадки, резервом коридора и коротким grace.
+    // Резерв коридора живёт до проезда (автоочистка по дистанции).
+    this.carPortalSafeRemaining = Math.max(
+      this.carPortalSafeRemaining,
+      this.opts.game.rocket.landingSafeSeconds,
+    );
     this.removeRocketCoins();
     this.rampCooldownRemaining = Math.max(
       this.rampCooldownRemaining,
       this.opts.game.rocket.postLandingRampCooldownSeconds,
     );
-  }
-
-  private clearRocketReturnCorridor(lane: number): void {
-    const maxZ =
-      this.playerSim.state.speed * this.opts.game.rocket.corridorSeconds;
-    for (let i = this.obstacles.length - 1; i >= 0; i--) {
-      const obstacle = this.obstacles[i];
-      if (obstacle.lane === lane && obstacle.z >= -2 && obstacle.z <= maxZ) {
-        this.obstacles.splice(i, 1);
-      }
-    }
-    for (let i = this.ramps.length - 1; i >= 0; i--) {
-      const ramp = this.ramps[i];
-      if (ramp.lane === lane && ramp.z >= -2 && ramp.z <= maxZ) {
-        this.ramps.splice(i, 1);
-      }
-    }
   }
 
   private removeRocketCoins(): void {
@@ -3091,6 +3317,7 @@ export class GameSim {
   }
 
   private clearMusicPatternArea(minZ: number, maxZ: number): void {
+    if (this.rhythmEnabled) return;
     const removedGateIds = new Set<number>();
     for (let i = this.ramps.length - 1; i >= 0; i--) {
       const ramp = this.ramps[i];
@@ -3118,6 +3345,7 @@ export class GameSim {
   }
 
   private thinGroundCoinsForNitro(): void {
+    if (this.rhythmEnabled) return;
     for (let i = this.coins.length - 1; i >= 0; i--) {
       const coin = this.coins[i];
       if (coin.airPathId !== undefined || coin.trainId !== undefined || coin.z <= 25) continue;
@@ -3480,6 +3708,17 @@ export class GameSim {
     if (mode !== 'rocket') {
       this.generator.setMode(mode);
     }
+    if (current === 'horse' && mode === 'car') {
+      // Безопасный переход конь → машина: новые чанки идут разреженными,
+      // уже видимые препятствия не трогаем, проезд через бывшие slide-группы
+      // подсвечиваем presentation-only монетами, короткий grace — как у портала.
+      this.generator.beginHorseToCarTransition();
+      this.carPortalSafeRemaining = Math.max(
+        this.carPortalSafeRemaining,
+        this.opts.game.horse.carPortalSafeSeconds,
+      );
+      this.markHorseLeftoversForCar();
+    }
     this.modeSwitchElapsed = 0;
     this.modeSwitches += 1;
     this.emitPlaytest(
@@ -3583,6 +3822,37 @@ export class GameSim {
     this.carPortalSafeRemaining = this.opts.game.horse.carPortalSafeSeconds;
     this.carPickups += 1;
     this.switchPlayerMode('car');
+  }
+
+  /**
+   * Presentation-only подсветка проездов через бывшие slide-комбинации:
+   * добавляет safeGuide-монеты в свободной полосе каждой опубликованной
+   * slide-группы в пределах горизонта реакции. Препятствия, хитбоксы и режим
+   * окружения не меняются.
+   */
+  private markHorseLeftoversForCar(): void {
+    const player = this.playerSim.state;
+    const horizonZ = horseLeftoverGuideHorizonZ(player.speed, this.levelgen.fairness);
+    const guides = planHorseToCarGuides(this.obstacles, this.levelgen.lanes, horizonZ);
+    let added = 0;
+    for (const guide of guides) {
+      if (added >= 12) break;
+      const duplicate = this.coins.some(
+        (coin) =>
+          coin.lane === guide.lane &&
+          Math.abs(coin.z - guide.z) < this.levelgen.minGapZ * 0.45,
+      );
+      if (duplicate) continue;
+      this.coins.push({
+        id: this.nextAirCoinId--,
+        lane: guide.lane,
+        z: guide.z,
+        y: this.levelgen.coinHeight,
+        collected: false,
+        routeKind: 'safeGuide',
+      });
+      added += 1;
+    }
   }
 
   private playerOverlapsPortalGroup(player: PlayerState, groupId: number): boolean {
@@ -4138,6 +4408,7 @@ export class GameSim {
       this.levelgen.laneFlow,
       this.opts.game.lane.positions,
       this.opts.game.obstaclePanicFlee,
+      true,
     );
   }
 

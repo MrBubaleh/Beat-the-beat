@@ -2,6 +2,15 @@ import type { PlayerAction } from '@core/gameplay/actions';
 import type { InputBuffer } from './InputBuffer';
 import { isUiGestureTarget, swipeToAction } from './swipe';
 
+/** Стрелки — основной вариант, WASD — тихий дубль с тем же смыслом. */
+export function keyCodeToAction(code: string): PlayerAction | null {
+  if (code === 'ArrowLeft' || code === 'KeyA') return 'laneLeft';
+  if (code === 'ArrowRight' || code === 'KeyD') return 'laneRight';
+  if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW') return 'nitro';
+  if (code === 'ArrowDown' || code === 'KeyS') return 'fastFall';
+  return null;
+}
+
 export class InputAdapter {
   private readonly buffer: InputBuffer;
   private tracking = false;
@@ -27,16 +36,7 @@ export class InputAdapter {
   }
 
   private readonly handleKeyDown = (e: KeyboardEvent): void => {
-    const action: PlayerAction | null =
-      e.code === 'ArrowLeft'
-        ? 'laneLeft'
-        : e.code === 'ArrowRight'
-          ? 'laneRight'
-          : e.code === 'Space' || e.code === 'ArrowUp'
-            ? 'nitro'
-            : e.code === 'ArrowDown'
-              ? 'fastFall'
-            : null;
+    const action = keyCodeToAction(e.code);
     if (!action) return;
     e.preventDefault();
     if ((action === 'nitro' || action === 'fastFall') && e.repeat) return;
@@ -55,19 +55,26 @@ export class InputAdapter {
   private readonly handlePointerMove = (e: PointerEvent): void => {
     if (!this.tracking || e.pointerId !== this.pointerId) return;
     if (e.cancelable) e.preventDefault();
+    const action = swipeToAction(e.clientX - this.startX, e.clientY - this.startY);
+    if (!action) return;
+    this.finishPointerGesture();
+    this.buffer.push(action, performance.now());
   };
 
   private readonly handlePointerUp = (e: PointerEvent): void => {
     if (!this.tracking || e.pointerId !== this.pointerId) return;
-    this.tracking = false;
-    this.pointerId = null;
     const action = swipeToAction(e.clientX - this.startX, e.clientY - this.startY);
+    this.finishPointerGesture();
     if (action) this.buffer.push(action, performance.now());
   };
 
   private readonly handlePointerCancel = (e: PointerEvent): void => {
     if (e.pointerId !== this.pointerId) return;
+    this.finishPointerGesture();
+  };
+
+  private finishPointerGesture(): void {
     this.tracking = false;
     this.pointerId = null;
-  };
+  }
 }

@@ -12,6 +12,8 @@ export interface ReplayMusicSample {
 }
 
 export interface ReplayData {
+  musicPlanningEnabled?: boolean;
+  gameplayRules?: import('../gameplay/gameplayRules').GameplayRulesId;
   version: 1;
   seed: number;
   durationSeconds: number;

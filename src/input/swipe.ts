@@ -1,6 +1,6 @@
 import type { PlayerAction } from '@core/gameplay/actions';
 
-export const SWIPE_THRESHOLD_PX = 48;
+export const SWIPE_THRESHOLD_PX = 36;
 
 export function swipeToAction(
   dx: number,

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 const SPARK_COUNT = 28;
 const SPRAY_COUNT = 10;
 const BOX = new THREE.BoxGeometry(1, 1, 1);
+const SILHOUETTE_SPHERE = new THREE.SphereGeometry(0.5, 10, 7);
 
 const PORTAL_VERTEX = `
 varying vec2 vUv;
@@ -64,6 +65,7 @@ export interface ModePortalInstance {
   sparkGroup: THREE.Group;
   sparks: THREE.Mesh[];
   sprays: THREE.Mesh[];
+  silhouette: THREE.Group | null;
   radius: number;
 }
 
@@ -127,6 +129,9 @@ export function createModePortal(
   });
   const disc = new THREE.Mesh(new THREE.CircleGeometry(radius, 48), portalMaterial);
   root.add(disc);
+
+  const silhouette = kind === 'horse' ? createHorseSilhouette(radius) : null;
+  if (silhouette) root.add(silhouette);
 
   const rimMaterial = new THREE.MeshBasicMaterial({
     color: theme.rim,
@@ -201,8 +206,52 @@ export function createModePortal(
     sparkGroup,
     sparks,
     sprays,
+    silhouette,
     radius,
   };
+}
+
+function createHorseSilhouette(radius: number): THREE.Group {
+  const group = new THREE.Group();
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x071018,
+    transparent: true,
+    opacity: 0.76,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const addSphere = (x: number, y: number, sx: number, sy: number): void => {
+    const mesh = new THREE.Mesh(SILHOUETTE_SPHERE, material);
+    mesh.position.set(x * radius, y * radius, 0);
+    mesh.scale.set(sx * radius, sy * radius, radius * 0.025);
+    group.add(mesh);
+  };
+  const addBox = (
+    x: number,
+    y: number,
+    sx: number,
+    sy: number,
+    rotation = 0,
+  ): void => {
+    const mesh = new THREE.Mesh(BOX, material);
+    mesh.position.set(x * radius, y * radius, 0);
+    mesh.scale.set(sx * radius, sy * radius, radius * 0.025);
+    mesh.rotation.z = rotation;
+    group.add(mesh);
+  };
+  addSphere(-0.08, 0.02, 0.9, 0.42);
+  addBox(0.28, 0.2, 0.2, 0.48, -0.42);
+  addSphere(0.42, 0.35, 0.34, 0.23);
+  addBox(0.55, 0.31, 0.22, 0.1, -0.08);
+  addBox(0.34, 0.53, 0.07, 0.18, -0.3);
+  addBox(0.48, 0.54, 0.07, 0.17, 0.24);
+  for (const x of [-0.36, -0.12, 0.12, 0.3]) {
+    addBox(x, -0.32, 0.075, 0.48, x < 0 ? -0.08 : 0.06);
+  }
+  addBox(-0.58, 0.05, 0.34, 0.08, -0.34);
+  group.position.z = 0.035;
+  group.renderOrder = 4;
+  return group;
 }
 
 export function updateHorsePortal(
@@ -222,6 +271,9 @@ export function updateModePortal(
   instance.portalMaterial.uniforms.uPulse.value = pulse;
   instance.rimMaterial.opacity = 0.88 + pulse * 0.12;
   instance.glowMaterial.opacity = 0.34 + pulse * 0.22;
+  if (instance.silhouette) {
+    instance.silhouette.scale.setScalar(1 + pulse * 0.025);
+  }
   instance.sparkGroup.rotation.z = -time * 2.35;
   const r = instance.radius;
   for (let i = 0; i < instance.sparks.length; i++) {

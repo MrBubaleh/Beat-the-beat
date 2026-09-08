@@ -20,7 +20,13 @@ SfxEventQueue → SfxDirector → SfxCommand[] → SfxEngine → sfxBus → mast
 
 Источник подключён к `rocketSampleBus` → master (минуя SFX highpass/compressor). Vite включает MP3 отдельным asset в production.
 
-Настройка `configs/sfx.default.json` → `rocketSample`: gain 1.11, fadeInMs 0, fadeOutMs 1290.
+Настройка `configs/sfx.default.json` → `rocketSample`: gain 0.9, fadeInMs 0, fadeOutMs 1900.
+
+## Пустое нитро
+
+Нажатие «вверх» на машине без готового нитро не даёт ускорения: GameSim ставит короткий
+`nitroDryPulse` (только presentation: чих двигателя + импульс машины + тряска пустой шкалы)
+с кулдауном повторных срабатываний. Звук — патч `nitroDry` через обычную очередь SFX.
 
 ## Патчи и buses
 

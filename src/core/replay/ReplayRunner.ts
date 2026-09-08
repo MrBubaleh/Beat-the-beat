@@ -22,7 +22,17 @@ export class ReplayRunner {
     let inputIndex = 0;
     let musicIndex = 0;
 
+    const currentMusic = (): MusicState => {
+      while (musicIndex + 1 < replay.music.length && replay.music[musicIndex + 1].t <= tick.t) musicIndex++;
+      return replay.music[musicIndex]?.music ?? emptyMusic();
+    };
     const sim = new GameSim({
+      musicPlanningEnabled: replay.musicPlanningEnabled,
+      gameplayRules: replay.gameplayRules,
+      ...(replay.musicPlanningEnabled ? {
+        getTrackTime: () => currentMusic().forecast?.now ?? tick.t,
+        getTrackDuration: () => replay.trackDurationSeconds ?? 0,
+      } : {}),
       game: this.opts.game,
       levelgen: this.opts.levelgen,
       director: this.opts.director,
@@ -30,7 +40,7 @@ export class ReplayRunner {
       nowMs: () => tick.t * 1000,
       getSongProgress: () =>
         replay.trackDurationSeconds && replay.trackDurationSeconds > 0
-          ? tick.t / replay.trackDurationSeconds
+          ? (replay.musicPlanningEnabled ? currentMusic().forecast?.now ?? tick.t : tick.t) / replay.trackDurationSeconds
           : 0,
       consumeInput: () => {
         const ms = tick.t * 1000;

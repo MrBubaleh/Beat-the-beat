@@ -45,9 +45,10 @@ export function startObstaclePanicFlee(
   laneFlow: readonly number[],
   lanePositions: readonly number[],
   cfg: ObstaclePanicFleeConfig,
+  allowOutsideStartBand = false,
 ): boolean {
   if (!canPanicFleeObstacle(obstacle)) return false;
-  if (!qualifiesForPanicFleeZ(obstacle.z, cfg)) return false;
+  if (!allowOutsideStartBand && !qualifiesForPanicFleeZ(obstacle.z, cfg)) return false;
 
   const flow = laneFlow[obstacle.lane] ?? 0;
   const lateralSign = panicFleeLateralSign(obstacle.lane, lanePositions);

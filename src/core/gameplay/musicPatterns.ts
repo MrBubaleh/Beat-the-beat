@@ -1,3 +1,5 @@
+export { requestMusicalPatterns } from './musicPlanning';
+
 import type { DirectorPhase } from '@core/state/DirectorState';
 
 export type MusicPatternKind =

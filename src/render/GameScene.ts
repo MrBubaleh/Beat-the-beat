@@ -14,6 +14,7 @@ import type { DamageState } from '@core/gameplay/health';
 import type { AirState } from '@core/gameplay/air';
 import type { RocketPhase } from '@core/gameplay/rocket';
 import { easeOutBack, easeOutCubic } from '@core/gameplay/rocket';
+import { NITRO_DRY_PULSE_SECONDS } from '@core/gameplay/nitro';
 import { levelIntroCameraBlend } from '@core/gameplay/levelIntro';
 import {
   clampPresentationOffset,
@@ -74,13 +75,16 @@ import {
 import { adrenalineBarVisualPercent } from '@ui/adrenalineBarVisual';
 import {
   buildObstacleModel,
+  createObstacleTintOutline,
   createObstacleModelMaterials,
+  disposeObstacleTintOutline,
   MICRO_NITRO_CANISTER_SPIN_RATE,
   MICRO_NITRO_CANISTER_TILT_X,
   MICRO_NITRO_CANISTER_TILT_Z,
   MICRO_NITRO_CANISTER_VISUAL_SCALE,
   resolveObstacleModelDimensions,
   type ObstacleModelInstance,
+  type ObstacleTintOutline,
   type ObstacleModelMaterials,
 } from './ObstacleModels';
 import { resolveObstacleVisual, shouldReverseRoadObstacle } from './obstacleVisualVariants';
@@ -464,9 +468,9 @@ export class GameScene {
   private readonly playerRocketEmissive = new THREE.Color(0x5a2a99);
   private readonly playerBlasterColor = new THREE.Color(0x69eaff);
   private readonly playerBlasterEmissive = new THREE.Color(0x16bfff);
-  private readonly tallCarColor = new THREE.Color(0xcc3344);
+  private readonly tallCarColor = new THREE.Color(0xdd3f52);
   private readonly tallHorseColor = new THREE.Color(0xff5a6b);
-  private readonly tallCarEmissive = new THREE.Color(0x330a0a);
+  private readonly tallCarEmissive = new THREE.Color(0x441010);
   private readonly tallHorseEmissive = new THREE.Color(0x7a101d);
   private readonly lowHorseColor = new THREE.Color(0xffd45f);
   private readonly lowHorseEmissive = new THREE.Color(0x80500a);
@@ -474,8 +478,8 @@ export class GameScene {
   private readonly overheadHorseColor = new THREE.Color(0xffb452);
   private readonly overheadCarEmissive = new THREE.Color(0x5c2107);
   private readonly overheadHorseEmissive = new THREE.Color(0x8a3d08);
-  private readonly destructibleBaseColor = new THREE.Color(0xcc3344);
-  private readonly destructibleNitroColor = new THREE.Color(0x44bb77);
+  private readonly destructibleBaseColor = new THREE.Color(0xdd3f52);
+  private readonly destructibleNitroColor = new THREE.Color(0x55d98c);
   private readonly destructibleBaseEmissive = new THREE.Color(0x330a0a);
   private readonly destructibleNitroEmissive = new THREE.Color(0x0a3318);
   private readonly edgeBaseColor = new THREE.Color(0x66ccff);
@@ -524,6 +528,7 @@ export class GameScene {
   private beatLaunchPulse = 0;
   private horizonVideoPulseBlend = 0;
   private readonly vigEl: HTMLDivElement;
+  private readonly tutorialSlowMoEl: HTMLDivElement;
   private readonly rocketTunnelVigEl: HTMLDivElement;
   private readonly critEl: HTMLDivElement;
   private readonly damagedEl: HTMLDivElement;
@@ -679,6 +684,13 @@ export class GameScene {
       'position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;';
     this.vigEl.style.setProperty('--vig-inner', `${game.postfx.vigInner * 100}%`);
     container.appendChild(this.vigEl);
+
+    this.tutorialSlowMoEl = document.createElement('div');
+    this.tutorialSlowMoEl.style.cssText =
+      'position:fixed;inset:0;pointer-events:none;z-index:6;' +
+      'background:radial-gradient(ellipse 88% 74% at 50% 48%, transparent 58%, rgba(46,196,182,0.3) 100%);' +
+      'box-shadow:inset 0 0 28px rgba(125,231,255,0.18);opacity:0;';
+    container.appendChild(this.tutorialSlowMoEl);
 
     this.critEl = document.createElement('div');
     this.critEl.style.cssText =
@@ -949,10 +961,10 @@ export class GameScene {
     this.comboBadge.visible = false;
     this.scene.add(this.comboBadge);
 
-    this.tallMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3344, emissive: 0x330a0a });
+    this.tallMaterial = new THREE.MeshStandardMaterial({ color: 0xdd3f52, emissive: 0x441010 });
     this.trainRoofTallMaterial = new THREE.MeshStandardMaterial({
-      color: 0xcc3344,
-      emissive: 0x330a0a,
+      color: 0xdd3f52,
+      emissive: 0x441010,
       emissiveIntensity: 0.35,
       roughness: 0.55,
     });
@@ -986,13 +998,13 @@ export class GameScene {
       depthWrite: true,
     });
     this.lowMaterial = new THREE.MeshStandardMaterial({
-      color: 0xcc3344,
-      emissive: 0x330a0a,
+      color: 0xdd3f52,
+      emissive: 0x441010,
       metalness: 0.35,
     });
     this.nitroLowMaterial = new THREE.MeshStandardMaterial({
-      color: 0x44bb77,
-      emissive: 0x0a3318,
+      color: 0x55d98c,
+      emissive: 0x0f4a26,
     });
     this.microMaterial = new THREE.MeshStandardMaterial({
       color: 0x55ed8f,
@@ -1088,6 +1100,7 @@ export class GameScene {
 
   update(snapshot: GameSnapshot, dt: number, tutorial: TutorialIntent | null = null): void {
     this.tutorialArrows.update(tutorial, dt);
+    this.tutorialSlowMoEl.style.opacity = String((tutorial?.slowMoBlend ?? 0) * 0.48);
     const motionActive = dt > 1e-6;
     if (!motionActive) {
       this.shakeAmp = 0;
@@ -1692,6 +1705,11 @@ export class GameScene {
     this.updateContactShadow(player);
     this.updatePlayerSpin(player);
     this.updatePlayerModelAnimation(player, dt, motionActive);
+    if (motionActive && snapshot.nitroDryPulse > 0 && player.mode === 'car') {
+      const dry = Math.min(1, snapshot.nitroDryPulse / NITRO_DRY_PULSE_SECONDS);
+      this.playerMesh.position.y -= dry * 0.05;
+      this.playerMesh.rotation.z += dry * 0.05 * Math.sin(this.time * 70);
+    }
     this.updateFirstPersonPresentation(player);
     this.updateComboBadge(snapshot, dt);
     if (player.airState === 'landing' && this.prevAirState !== 'landing') {
@@ -2061,6 +2079,7 @@ export class GameScene {
     this.prevDamageState = 'normal';
     this.edgeMaterial.opacity = 0;
     this.vigEl.style.opacity = '0';
+    this.tutorialSlowMoEl.style.opacity = '0';
     this.rocketTunnelVigEl.style.opacity = '0';
     this.critEl.style.opacity = '0';
     this.damagedEl.style.opacity = '0';
@@ -2568,6 +2587,7 @@ export class GameScene {
 
   dispose(): void {
     this.tutorialArrows.dispose();
+    this.tutorialSlowMoEl.remove();
     window.removeEventListener('resize', this.handleResize);
     this.contactShadowMaterial.map?.dispose();
     this.renderer.dispose();
@@ -3155,6 +3175,27 @@ export class GameScene {
           : lerp(1, 0.18, fade);
         fadeMaterial.depthWrite = false;
         material = fadeMaterial;
+      } else if (
+        !isTrainRoofObstacle &&
+        !obstacle.broken &&
+        !obstacle.smashed &&
+        (obstacle.kind === 'low' ||
+          obstacle.kind === 'tall' ||
+          obstacle.kind === 'micro') &&
+        obstacle.z >= -1 &&
+        obstacle.z <= 26
+      ) {
+        // Деликатное отделение ближайших важных объектов от фона и тумана:
+        // только свой клон материала группы, только ближняя зона, без
+        // глобальной экспозиции и без неонового свечения.
+        const proximity = 1 - clamp01((obstacle.z + 1) / 27);
+        fadeMaterial.color.copy(baseMaterial.color);
+        fadeMaterial.emissive.copy(baseMaterial.emissive);
+        fadeMaterial.emissiveIntensity =
+          baseMaterial.emissiveIntensity * (1 + 0.22 * proximity);
+        fadeMaterial.opacity = 1;
+        fadeMaterial.depthWrite = true;
+        material = fadeMaterial;
       }
       body.material = material;
       top.material = material;
@@ -3218,6 +3259,9 @@ export class GameScene {
             clearance: detailClearance,
           },
           snapshot.player.speed,
+          obstacle.kind === 'low' &&
+            !horseObstacle &&
+            (nitroReadyVisual > 0 || nitroActiveVisual > 0),
         );
       detailRoot.visible = detailVisible;
       if (detailVisible && (activeSlideGroup || behindFade)) {
@@ -3512,6 +3556,7 @@ export class GameScene {
       clearance: number;
     },
     playerSpeed: number,
+    showGreenOutline: boolean,
   ): boolean {
     const choice = resolveObstacleVisual(
       obstacle,
@@ -3535,6 +3580,10 @@ export class GameScene {
       visualDimensions.clearance.toFixed(2),
     ].join(':');
     if (group.userData.detailKey !== key) {
+      const previousOutline = group.userData.greenOutline as
+        | ObstacleTintOutline
+        | undefined;
+      if (previousOutline) disposeObstacleTintOutline(previousOutline);
       detailRoot.clear();
       const model = buildObstacleModel(
         choice.variant,
@@ -3544,14 +3593,21 @@ export class GameScene {
       detailRoot.add(model.root);
       group.userData.detailKey = key;
       group.userData.detailModel = model;
+      group.userData.greenOutline = createObstacleTintOutline(model);
     }
     const model = group.userData.detailModel as ObstacleModelInstance;
+    const greenOutline = group.userData.greenOutline as ObstacleTintOutline;
     for (const binding of model.baseMaterials) {
       binding.mesh.material = binding.material;
     }
     for (const mesh of model.tintMeshes) mesh.material = tintMaterial;
     for (const mesh of model.lightMeshes) mesh.material = frontLightMaterial;
     for (const mesh of model.rearLightMeshes) mesh.material = rearLightMaterial;
+    const outlineVisible = choice.family === 'medium' && showGreenOutline;
+    for (const line of greenOutline.lines) line.visible = outlineVisible;
+    greenOutline.material.opacity = outlineVisible
+      ? 0.3 + 0.2 * (0.5 + 0.5 * Math.sin(this.time * 8.5 + obstacle.id))
+      : 0;
     const relativeSpeed = Math.max(
       4,
       playerSpeed + (this.laneFlow[obstacle.lane] ?? 0),
@@ -4046,12 +4102,8 @@ export class GameScene {
     this.playerMesh.position.z = 0;
     this.playerMesh.rotation.x = 0;
     this.playerMesh.rotation.y = 0;
-    const target =
-      player.airState === 'airborne'
-        ? player.spinAngle
-        : player.airState === 'landing'
-          ? player.spinAngle
-          : 0;
+    // Keep trick scoring, but avoid a full-body barrel roll that can cause motion sickness.
+    const target = 0;
     this.playerMesh.rotation.z += (target - this.playerMesh.rotation.z) * Math.min(1, 0.2);
   }
 
@@ -4699,6 +4751,7 @@ export class GameScene {
     group.userData.detailRoot = detailRoot;
     group.userData.detailKey = '';
     group.userData.detailModel = null;
+    group.userData.greenOutline = undefined;
     group.userData.lowChunks = lowChunks;
     group.userData.horseLowChunks = horseLowChunks;
     group.userData.chunkCarMaterial = chunkCarMaterial;

@@ -55,6 +55,7 @@ export class VideoFileAudioSource implements IAudioSource {
   private async loadSrc(src: string, fileName: string): Promise<void> {
     this.video.src = src;
     await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => { cleanup(); reject(new Error(`Не удалось открыть файл: ${fileName}`)); }, 15000);
       const onMeta = (): void => {
         cleanup();
         resolve();
@@ -64,6 +65,7 @@ export class VideoFileAudioSource implements IAudioSource {
         reject(new Error(`не удалось загрузить '${fileName}'`));
       };
       const cleanup = (): void => {
+        clearTimeout(timeout);
         this.video.removeEventListener('loadedmetadata', onMeta);
         this.video.removeEventListener('error', onError);
       };

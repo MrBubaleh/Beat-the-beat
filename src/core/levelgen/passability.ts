@@ -16,6 +16,7 @@ export interface PassabilityOptions {
 }
 
 export interface ComfortableCarRouteOptions {
+  requiredWaypoints?: readonly { time: number; lane: number; z: number }[];
   playerDistance?: number;
   playerSpeed?: number;
   startLanes?: readonly number[];
@@ -564,6 +565,9 @@ export function findComfortableCarRoute(
     }
   }
 
+  for (const waypoint of options.requiredWaypoints ?? []) {
+    ensureEvent(Math.round(waypoint.time / timeStep), waypoint.z).requiredLanes.add(waypoint.lane);
+  }
   const orderedEvents = [...events.values()].sort((a, b) => a.row - b.row);
   const configuredStartLanes = options.startLanes ??
     Array.from({ length: config.lanes }, (_, lane) => lane);

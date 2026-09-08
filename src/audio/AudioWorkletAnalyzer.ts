@@ -3,11 +3,12 @@ import type { MusicState, RawFeatures } from '@core/state/MusicState';
 import { MusicStateBuilder } from '@core/state/MusicStateBuilder';
 import type { AudioClock } from './AudioClock';
 import type { IAudioAnalyzer } from './types';
-import processorUrl from './analyzer-processor.worklet.ts?url';
+import processorUrl from './analyzer-processor.worklet.ts?worker&url';
 
 export class AudioWorkletAnalyzer implements IAudioAnalyzer {
   private node: AudioWorkletNode | null = null;
   private clock: AudioClock | null = null;
+  private source: AudioNode | null = null;
   private readonly builder: MusicStateBuilder;
 
   constructor(
@@ -32,6 +33,7 @@ export class AudioWorkletAnalyzer implements IAudioAnalyzer {
     this.node.port.onmessage = (event: MessageEvent<RawFeatures>): void => {
       this.builder.push({ ...event.data, t: this.clock!.getTrackTime() });
     };
+    this.source = sourceNode;
     sourceNode.connect(this.node);
   }
 
@@ -45,6 +47,8 @@ export class AudioWorkletAnalyzer implements IAudioAnalyzer {
 
   stop(): void {
     if (this.node) {
+      this.source?.disconnect(this.node);
+      this.source = null;
       this.node.disconnect();
       this.node.port.onmessage = null;
       this.node = null;

@@ -35,6 +35,17 @@ export class MainMenu {
     this.listEl.className = 'menu-tracks';
     panel.appendChild(this.listEl);
 
+    const hints = document.createElement('div');
+    hints.className = 'menu-hints';
+    const hintsDesktop = document.createElement('div');
+    hintsDesktop.className = 'menu-hints-desktop';
+    hintsDesktop.textContent = '← → — полосы · ↑ — нитро · ↓ — подкат · WASD — тоже работает';
+    const hintsTouch = document.createElement('div');
+    hintsTouch.className = 'menu-hints-touch';
+    hintsTouch.textContent = 'свайпы: ← → — полосы · ↑ — нитро · ↓ — подкат';
+    hints.append(hintsDesktop, hintsTouch);
+    panel.appendChild(hints);
+
     const footer = document.createElement('div');
     footer.className = 'menu-footer';
     this.volume = new VolumeSlider({
@@ -44,6 +55,8 @@ export class MainMenu {
     footer.appendChild(this.volume.root);
     this.statusEl = document.createElement('div');
     this.statusEl.className = 'menu-status';
+    this.statusEl.setAttribute('role', 'status');
+    this.statusEl.setAttribute('aria-live', 'polite');
     footer.appendChild(this.statusEl);
     panel.appendChild(footer);
     this.setTracks([]);
@@ -63,6 +76,7 @@ export class MainMenu {
 
   setBusy(busy: boolean, message = ''): void {
     this.busy = busy;
+    this.root.classList.toggle('is-preparing', busy);
     this.statusEl.textContent = message;
     this.statusEl.classList.toggle('is-error', false);
     this.syncBusyState();
@@ -72,6 +86,7 @@ export class MainMenu {
     this.busy = false;
     this.statusEl.textContent = message;
     this.statusEl.classList.toggle('is-error', true);
+    this.root.classList.remove('is-preparing');
     this.syncBusyState();
   }
 
@@ -84,6 +99,7 @@ export class MainMenu {
     this.statusEl.textContent = '';
     this.statusEl.classList.remove('is-error');
     this.syncBusyState();
+    this.root.classList.remove('is-preparing');
     this.root.style.display = 'none';
   }
 

@@ -8,12 +8,14 @@ export class ReplayRecorder {
   private _seed = 0;
   private trackDurationSeconds = 0;
   private recording = false;
+  private settings: Pick<ReplayData, 'musicPlanningEnabled' | 'gameplayRules'> = {};
 
   get isRecording(): boolean {
     return this.recording;
   }
 
-  start(seed: number, trackDurationSeconds = 0): void {
+  start(seed: number, trackDurationSeconds = 0, settings: Pick<ReplayData, 'musicPlanningEnabled' | 'gameplayRules'> = {}): void {
+    this.settings = settings;
     this._seed = seed;
     this.trackDurationSeconds = trackDurationSeconds;
     this.recording = true;
@@ -36,6 +38,7 @@ export class ReplayRecorder {
     this.recording = false;
     return {
       version: 1,
+      ...this.settings,
       seed: this._seed,
       durationSeconds,
       ...(this.trackDurationSeconds > 0

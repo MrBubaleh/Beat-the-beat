@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   buildObstacleModel,
+  createObstacleTintOutline,
   createObstacleModelMaterials,
   resolveObstacleModelDimensions,
 } from '../../src/render/ObstacleModels';
@@ -108,6 +109,18 @@ describe('obstacle model geometry', () => {
     );
     expect(model.lightMeshes.filter((lamp) => lamp.position.z > 0)).toHaveLength(2);
     expect(model.rearLightMeshes.filter((lamp) => lamp.position.z < 0)).toHaveLength(2);
+  });
+
+  it('builds an optional outline from the actual tinted car geometry', () => {
+    const model = buildObstacleModel(
+      'sedan',
+      { width: 1.2, height: 1.1, depth: 2.32, clearance: 0 },
+      createObstacleModelMaterials(),
+    );
+    const outline = createObstacleTintOutline(model);
+    expect(outline.lines).toHaveLength(model.tintMeshes.length);
+    expect(outline.lines.every((line) => line.parent instanceof THREE.Mesh)).toBe(true);
+    expect(outline.lines.every((line) => line.visible === false)).toBe(true);
   });
 
   it('keeps the cargo wagon canopy inside a single-lane silhouette', () => {

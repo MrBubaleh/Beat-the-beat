@@ -122,7 +122,7 @@ async function patch(id: SfxId) {
 }
 const labels: Record<SfxId, string> = {
   hit:'Удар',canister:'Баллон нитро',smash:'Разрушение',coin:'Монета',
-  nitroReady:'Нитро готово',nitroStart:'Нитро: запуск',nitroEnd:'Нитро: выход',
+  nitroReady:'Нитро готово',nitroStart:'Нитро: запуск',nitroEnd:'Нитро: выход',nitroDry:'Нитро: пустой чих',
   rocketPrepare:'Ракета: подготовка',rocketLaunch:'Ракета: взлёт',rocketEnd:'Ракета: спад',
   jump:'Прыжок',land:'Приземление',slideStart:'Подкат: вход',slideEnd:'Подкат: выход',
   lane:'Перестроение',nearMiss:'Близкий проход',combo:'Достижение комбо',mode:'Смена режима',
